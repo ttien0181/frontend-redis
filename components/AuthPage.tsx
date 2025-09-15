@@ -56,30 +56,30 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-900 p-4">
-      <div className="w-full max-w-md p-8 space-y-6 bg-slate-800 rounded-2xl shadow-2xl shadow-indigo-900/50">
+    <div className="flex items-center justify-center min-h-screen bg-slate-100 p-4">
+      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl shadow-xl">
         <div className="flex justify-center mb-4">
             <LogoIcon />
         </div>
         <div className="text-center">
-          <h2 className="text-3xl font-extrabold text-white">
+          <h2 className="text-3xl font-extrabold text-slate-900">
             {isLoginView ? 'Welcome Back' : 'Create Your Account'}
           </h2>
-          <p className="mt-2 text-sm text-gray-400">
+          <p className="mt-2 text-sm text-slate-600">
             {isLoginView ? 'Or ' : 'Already have an account? '}
             <button
               onClick={() => {
                 setIsLoginView(!isLoginView);
                 setError(null);
               }}
-              className="font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+              className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors"
             >
               {isLoginView ? 'create an account' : 'sign in'}
             </button>
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && <p className="text-sm text-red-400 text-center bg-red-500/10 p-3 rounded-md">{error}</p>}
+          {error && <p className="text-sm text-red-700 text-center bg-red-100 p-3 rounded-md">{error}</p>}
           <div className="space-y-4">
             {!isLoginView && (
               <>
@@ -98,7 +98,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
           </div>
 
           <div>
-            <button type="submit" disabled={loading} className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 focus:ring-offset-slate-800 disabled:bg-indigo-500/50 transition-all duration-300">
+            <button type="submit" disabled={loading} className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 focus:ring-offset-white disabled:bg-indigo-500/50 transition-all duration-300">
               <span className="absolute left-0 inset-y-0 flex items-center pl-3">
               </span>
               {loading ? 'Processing...' : (isLoginView ? 'Sign In' : 'Register')}
@@ -114,16 +114,16 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
             width: 100%;
             padding: 0.85rem;
             border-radius: 0.375rem;
-            border: 1px solid #4a5568;
-            background-color: #2d3748;
-            color: white;
+            border: 1px solid #cbd5e1;
+            background-color: #f1f5f9;
+            color: #1e293b;
             outline: none;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
         .input-field:focus {
             z-index: 10;
             border-color: #6366f1;
-            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.4);
         }
       `}</style>
     </div>

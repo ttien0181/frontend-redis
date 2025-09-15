@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import Dashboard from './components/Dashboard';
 import AuthPage from './components/AuthPage';
@@ -32,7 +31,7 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-900 text-gray-200">
+    <div className="min-h-screen bg-slate-100 text-slate-900">
       {token && user ? (
         <Dashboard user={user} onLogout={handleLogout} token={token} />
       ) : (

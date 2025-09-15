@@ -19,10 +19,10 @@ interface ModalProps {
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
     if (!isOpen) return null;
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4" onClick={onClose}>
-            <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-lg p-6 relative" onClick={e => e.stopPropagation()}>
-                <h3 className="text-xl font-semibold text-white mb-4">{title}</h3>
-                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4" onClick={onClose}>
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 relative" onClick={e => e.stopPropagation()}>
+                <h3 className="text-xl font-semibold text-slate-900 mb-4">{title}</h3>
+                <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-800 text-2xl leading-none">&times;</button>
                 <div>{children}</div>
             </div>
         </div>
@@ -42,16 +42,16 @@ interface ConfirmationModalProps {
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, onConfirm, title, message, confirmText = "Confirm", isLoading = false }) => {
     if (!isOpen) return null;
     return (
-         <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4" onClick={onClose}>
-            <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-md p-6 relative" onClick={e => e.stopPropagation()}>
+         <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4" onClick={onClose}>
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6 relative" onClick={e => e.stopPropagation()}>
                 <div className="flex items-start gap-4">
-                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-900/50 sm:mx-0 sm:h-10 sm:w-10">
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
                         <WarningIcon />
                     </div>
                     <div className="mt-0 text-left">
-                        <h3 className="text-lg leading-6 font-medium text-white">{title}</h3>
+                        <h3 className="text-lg leading-6 font-medium text-slate-900">{title}</h3>
                         <div className="mt-2">
-                            <p className="text-sm text-gray-400">{message}</p>
+                            <p className="text-sm text-slate-500">{message}</p>
                         </div>
                     </div>
                 </div>
@@ -59,7 +59,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, 
                     <button type="button" onClick={onConfirm} disabled={isLoading} className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:w-auto sm:text-sm disabled:bg-red-400">
                         {isLoading ? 'Deleting...' : confirmText}
                     </button>
-                    <button type="button" onClick={onClose} className="mt-3 w-full inline-flex justify-center rounded-md border border-slate-600 shadow-sm px-4 py-2 bg-slate-700 text-base font-medium text-gray-300 hover:bg-slate-600 focus:outline-none sm:mt-0 sm:w-auto sm:text-sm">
+                    <button type="button" onClick={onClose} className="mt-3 w-full inline-flex justify-center rounded-md border border-slate-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-slate-700 hover:bg-slate-50 focus:outline-none sm:mt-0 sm:w-auto sm:text-sm">
                         Cancel
                     </button>
                 </div>
@@ -78,16 +78,16 @@ interface AlertModalProps {
 const AlertModal: React.FC<AlertModalProps> = ({ isOpen, onClose, title, message }) => {
     if (!isOpen) return null;
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4" onClick={onClose}>
-            <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-md p-6 relative" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4" onClick={onClose}>
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6 relative" onClick={e => e.stopPropagation()}>
                 <div className="flex items-start gap-4">
-                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-900/50 sm:mx-0 sm:h-10 sm:w-10">
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
                         <WarningIcon />
                     </div>
                     <div className="mt-0 text-left">
-                        <h3 className="text-lg leading-6 font-medium text-white">{title}</h3>
+                        <h3 className="text-lg leading-6 font-medium text-slate-900">{title}</h3>
                         <div className="mt-2">
-                            <p className="text-sm text-gray-400">{message}</p>
+                            <p className="text-sm text-slate-500">{message}</p>
                         </div>
                     </div>
                 </div>
@@ -233,24 +233,24 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
   
   const StatusBadge = ({ status }: { status: string }) => {
     const colorMap: { [key: string]: string } = {
-        running: 'bg-green-500/20 text-green-400 border-green-500/30',
-        pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-        stopped: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
-        error: 'bg-red-500/20 text-red-400 border-red-500/30',
+        running: 'bg-green-100 text-green-800 border-green-200/60',
+        pending: 'bg-yellow-100 text-yellow-800 border-yellow-200/60',
+        stopped: 'bg-slate-100 text-slate-800 border-slate-200/60',
+        error: 'bg-red-100 text-red-800 border-red-200/60',
     };
     return <span className={`px-2 py-1 text-xs font-medium rounded-full border ${colorMap[status] || colorMap['stopped']}`}>{status}</span>
   };
 
   const renderHeader = () => (
-      <header className="bg-slate-900/70 backdrop-blur-sm p-4 sticky top-0 z-40 border-b border-slate-700/50">
+      <header className="bg-white/80 backdrop-blur-sm p-4 sticky top-0 z-40 border-b border-slate-200">
           <div className="container mx-auto flex justify-between items-center">
               <div className="flex items-center gap-3 cursor-pointer" onClick={() => { setSelectedOrg(null); setRedisInstances([]) }}>
                 <LogoIcon/>
-                <h1 className="text-xl font-bold text-white hidden sm:block">Cloud Dashboard</h1>
+                <h1 className="text-xl font-bold text-slate-900 hidden sm:block">Cloud Dashboard</h1>
               </div>
               <div className="flex items-center gap-4">
-                  <span className="text-gray-300 hidden md:block">{user.first_name} {user.last_name}</span>
-                  <button onClick={onLogout} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors p-2 rounded-md hover:bg-slate-700">
+                  <span className="text-slate-600 hidden md:block">{user.first_name} {user.last_name}</span>
+                  <button onClick={onLogout} className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors p-2 rounded-md hover:bg-slate-100">
                       <LogoutIcon />
                       Logout
                   </button>
@@ -262,33 +262,33 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
   const renderOrganizations = () => (
       <div>
           <div className="flex justify-between items-center mb-6">
-              <h2 className="text-3xl font-bold text-white">Organizations</h2>
-              <button onClick={() => setCreateOrgModalOpen(true)} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg shadow-indigo-600/30">
+              <h2 className="text-3xl font-bold text-slate-900">Organizations</h2>
+              <button onClick={() => setCreateOrgModalOpen(true)} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg shadow-indigo-500/30">
                   <PlusIcon /> Create
               </button>
           </div>
           {loading === 'orgs' ? <div className="flex justify-center p-8"><SpinnerIcon /></div> :
-           error && loading !== 'delete-org' ? <p className="text-red-400 bg-red-500/10 p-3 rounded-md">{error}</p> :
+           error && loading !== 'delete-org' ? <p className="text-red-700 bg-red-100 p-3 rounded-md">{error}</p> :
            organizations.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {organizations.map(org => (
-                    <div key={org.id} className="bg-slate-800/50 border border-slate-700 p-6 rounded-xl shadow-lg transition-all duration-300 flex flex-col justify-between hover:border-indigo-500/50 hover:shadow-indigo-900/50 relative group">
+                    <div key={org.id} className="bg-white border border-slate-200 p-6 rounded-xl shadow-md flex flex-col justify-between transition-all duration-300 hover:shadow-lg hover:border-indigo-400 relative group">
                         <div className="absolute top-3 right-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={(e) => { e.stopPropagation(); setOrgToEdit(org); setEditOrgModalOpen(true); }} className="p-2 rounded-full bg-slate-700 hover:bg-indigo-600 text-gray-300 hover:text-white"><EditIcon /></button>
-                            <button onClick={(e) => { e.stopPropagation(); setOrgToDelete(org); }} className="p-2 rounded-full bg-slate-700 hover:bg-red-600 text-gray-300 hover:text-white"><DeleteIcon /></button>
+                            <button onClick={(e) => { e.stopPropagation(); setOrgToEdit(org); setEditOrgModalOpen(true); }} className="p-2 rounded-full bg-slate-100 hover:bg-indigo-500 text-slate-500 hover:text-white"><EditIcon /></button>
+                            <button onClick={(e) => { e.stopPropagation(); setOrgToDelete(org); }} className="p-2 rounded-full bg-slate-100 hover:bg-red-500 text-slate-500 hover:text-white"><DeleteIcon /></button>
                         </div>
                         <div onClick={() => setSelectedOrg(org)} className="cursor-pointer">
                             <div className="flex items-center gap-4 mb-3">
-                                <div className="p-2 bg-slate-700 rounded-lg"><BuildingOfficeIcon /></div>
-                                <h3 className="text-xl font-semibold text-white">{org.name}</h3>
+                                <div className="p-2 bg-slate-100 rounded-lg"><BuildingOfficeIcon /></div>
+                                <h3 className="text-xl font-semibold text-slate-800">{org.name}</h3>
                             </div>
-                            <p className="text-gray-400 text-sm mb-4 h-10 overflow-hidden">{org.description}</p>
-                            <div className="text-xs text-gray-500 border-t border-slate-700 pt-3">Plan: <span className="font-semibold text-indigo-400">{org.plan}</span></div>
+                            <p className="text-slate-600 text-sm mb-4 h-10 overflow-hidden">{org.description}</p>
+                            <div className="text-xs text-slate-500 border-t border-slate-200 pt-3">Plan: <span className="font-semibold text-indigo-600">{org.plan}</span></div>
                         </div>
                     </div>
                 ))}
             </div>
-          ) : <div className="text-center py-10 bg-slate-800/50 rounded-lg border border-slate-700"><p className="text-gray-400">No organizations found. Let's create one!</p></div>}
+          ) : <div className="text-center py-10 bg-white rounded-lg border border-slate-200"><p className="text-slate-500">No organizations found. Let's create one!</p></div>}
       </div>
   );
 
@@ -296,51 +296,51 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
       <div>
           <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-4">
-                  <button onClick={() => { setSelectedOrg(null); setRedisInstances([]) }} className="flex items-center gap-2 p-2 rounded-md hover:bg-slate-700 text-gray-400 hover:text-white">
+                  <button onClick={() => { setSelectedOrg(null); setRedisInstances([]) }} className="flex items-center gap-2 p-2 rounded-md hover:bg-slate-200 text-slate-500 hover:text-slate-900">
                       <ArrowLeftIcon />
                   </button>
-                  <h2 className="text-xl md:text-3xl font-bold text-white truncate">{selectedOrg?.name} / Instances</h2>
+                  <h2 className="text-xl md:text-3xl font-bold text-slate-900 truncate">{selectedOrg?.name} / Instances</h2>
               </div>
-              <button onClick={() => setCreateRedisModalOpen(true)} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg shadow-indigo-600/30">
+              <button onClick={() => setCreateRedisModalOpen(true)} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg shadow-indigo-500/30">
                   <PlusIcon /> Create
               </button>
           </div>
           {loading === 'redis' ? <div className="flex justify-center p-8"><SpinnerIcon /></div> :
-           error && loading !== 'delete-redis' ? <p className="text-red-400 bg-red-500/10 p-3 rounded-md">{error}</p> :
+           error && loading !== 'delete-redis' ? <p className="text-red-700 bg-red-100 p-3 rounded-md">{error}</p> :
            redisInstances.length > 0 ? (
-            <div className="bg-slate-800/50 border border-slate-700 rounded-xl shadow-lg overflow-hidden">
+            <div className="bg-white border border-slate-200 rounded-xl shadow-md overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
-                        <thead className="bg-slate-700/50">
+                        <thead className="bg-slate-50">
                             <tr>
-                                <th className="p-4 font-semibold">Name</th>
-                                <th className="p-4 font-semibold">Status</th>
-                                <th className="p-4 font-semibold">Domain</th>
-                                <th className="p-4 font-semibold">Version</th>
-                                <th className="p-4 font-semibold">Memory</th>
-                                <th className="p-4 font-semibold">Actions</th>
+                                <th className="p-4 font-semibold text-slate-600">Name</th>
+                                <th className="p-4 font-semibold text-slate-600">Status</th>
+                                <th className="p-4 font-semibold text-slate-600">Domain</th>
+                                <th className="p-4 font-semibold text-slate-600">Version</th>
+                                <th className="p-4 font-semibold text-slate-600">Memory</th>
+                                <th className="p-4 font-semibold text-slate-600">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {redisInstances.map(inst => (
-                                <tr key={inst.id} className="border-t border-slate-700 hover:bg-slate-700/50 transition-colors">
-                                    <td className="p-4 flex items-center gap-3"><DatabaseIcon /> {inst.name}</td>
+                                <tr key={inst.id} className="border-t border-slate-200 hover:bg-slate-50 transition-colors">
+                                    <td className="p-4 flex items-center gap-3 text-slate-700"><DatabaseIcon /> {inst.name}</td>
                                     <td className="p-4"><StatusBadge status={inst.status} /></td>
-                                    <td className="p-4 font-mono text-sm text-gray-400 truncate max-w-xs">{inst.domain}</td>
-                                    <td className="p-4">v{inst.redis_version}</td>
-                                    <td className="p-4">{(inst.max_memory / (1024 * 1024)).toFixed(0)} MB</td>
-                                    <td className="p-4"><button onClick={() => setRedisToDelete(inst)} className="p-2 rounded-full bg-slate-700 hover:bg-red-600 text-gray-300 hover:text-white"><DeleteIcon /></button></td>
+                                    <td className="p-4 font-mono text-sm text-slate-500 truncate max-w-xs">{inst.domain}</td>
+                                    <td className="p-4 text-slate-700">v{inst.redis_version}</td>
+                                    <td className="p-4 text-slate-700">{(inst.max_memory / (1024 * 1024)).toFixed(0)} MB</td>
+                                    <td className="p-4"><button onClick={() => setRedisToDelete(inst)} className="p-2 rounded-full bg-slate-100 hover:bg-red-500 text-slate-500 hover:text-white"><DeleteIcon /></button></td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
             </div>
-           ) : <div className="text-center py-10 bg-slate-800/50 rounded-lg border border-slate-700"><p className="text-gray-400">No Redis instances found. Create one to get started.</p></div>}
+           ) : <div className="text-center py-10 bg-white rounded-lg border border-slate-200"><p className="text-slate-500">No Redis instances found. Create one to get started.</p></div>}
       </div>
   );
   
-  const formFieldClasses = "w-full p-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition";
+  const formFieldClasses = "w-full p-2 bg-slate-100 border border-slate-300 rounded-md text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition";
   
   return (
     <>
@@ -357,7 +357,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
               <button type="submit" disabled={loading === 'create-org'} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg disabled:bg-indigo-400 transition-colors">
                   {loading === 'create-org' ? 'Creating...' : 'Create Organization'}
               </button>
-              {error && loading === 'create-org' && <p className="text-sm text-red-400 text-center mt-2">{error}</p>}
+              {error && loading === 'create-org' && <p className="text-sm text-red-700 text-center mt-2">{error}</p>}
           </form>
       </Modal>
 
@@ -369,7 +369,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
               <button type="submit" disabled={loading === 'edit-org'} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg disabled:bg-indigo-400 transition-colors">
                   {loading === 'edit-org' ? 'Saving...' : 'Save Changes'}
               </button>
-              {error && loading === 'edit-org' && <p className="text-sm text-red-400 text-center mt-2">{error}</p>}
+              {error && loading === 'edit-org' && <p className="text-sm text-red-700 text-center mt-2">{error}</p>}
           </form>
       </Modal>
 
@@ -386,17 +386,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
               </select>
               <input type="number" placeholder="Max Memory (MB)" value={newRedisData.max_memory / (1024*1024)} onChange={e => setNewRedisData({...newRedisData, max_memory: parseInt(e.target.value) * 1024 * 1024})} className={formFieldClasses} required />
               <div className="flex items-center justify-between pt-2">
-                  <label htmlFor="persistence_enabled" className="text-gray-300">Enable Persistence</label>
-                  <input type="checkbox" id="persistence_enabled" checked={newRedisData.persistence_enabled} onChange={e => setNewRedisData({...newRedisData, persistence_enabled: e.target.checked})} className="h-5 w-5 rounded bg-slate-700 border-slate-600 text-indigo-500 focus:ring-indigo-600 focus:ring-offset-slate-800" />
+                  <label htmlFor="persistence_enabled" className="text-slate-700">Enable Persistence</label>
+                  <input type="checkbox" id="persistence_enabled" checked={newRedisData.persistence_enabled} onChange={e => setNewRedisData({...newRedisData, persistence_enabled: e.target.checked})} className="h-5 w-5 rounded bg-slate-100 border-slate-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-white" />
               </div>
               <div className="flex items-center justify-between">
-                  <label htmlFor="backup_enabled" className="text-gray-300">Enable Backups</label>
-                  <input type="checkbox" id="backup_enabled" checked={newRedisData.backup_enabled} onChange={e => setNewRedisData({...newRedisData, backup_enabled: e.target.checked})} className="h-5 w-5 rounded bg-slate-700 border-slate-600 text-indigo-500 focus:ring-indigo-600 focus:ring-offset-slate-800" />
+                  <label htmlFor="backup_enabled" className="text-slate-700">Enable Backups</label>
+                  <input type="checkbox" id="backup_enabled" checked={newRedisData.backup_enabled} onChange={e => setNewRedisData({...newRedisData, backup_enabled: e.target.checked})} className="h-5 w-5 rounded bg-slate-100 border-slate-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-white" />
               </div>
               <button type="submit" disabled={loading === 'create-redis'} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg disabled:bg-indigo-400 !mt-6">
                   {loading === 'create-redis' ? 'Creating...' : 'Create Instance'}
               </button>
-              {error && loading === 'create-redis' && <p className="text-sm text-red-400 text-center mt-2">{error}</p>}
+              {error && loading === 'create-redis' && <p className="text-sm text-red-700 text-center mt-2">{error}</p>}
           </form>
       </Modal>
 
