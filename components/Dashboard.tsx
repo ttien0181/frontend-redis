@@ -68,6 +68,39 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, 
     )
 };
 
+// Reusable Alert Modal
+interface AlertModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    title: string;
+    message: string;
+}
+const AlertModal: React.FC<AlertModalProps> = ({ isOpen, onClose, title, message }) => {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4" onClick={onClose}>
+            <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-md p-6 relative" onClick={e => e.stopPropagation()}>
+                <div className="flex items-start gap-4">
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-900/50 sm:mx-0 sm:h-10 sm:w-10">
+                        <WarningIcon />
+                    </div>
+                    <div className="mt-0 text-left">
+                        <h3 className="text-lg leading-6 font-medium text-white">{title}</h3>
+                        <div className="mt-2">
+                            <p className="text-sm text-gray-400">{message}</p>
+                        </div>
+                    </div>
+                </div>
+                <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                    <button type="button" onClick={onClose} className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none sm:w-auto sm:text-sm">
+                        OK
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -81,6 +114,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
   const [isEditOrgModalOpen, setEditOrgModalOpen] = useState(false);
   const [orgToEdit, setOrgToEdit] = useState<Organization | null>(null);
   const [orgToDelete, setOrgToDelete] = useState<Organization | null>(null);
+  const [alertModal, setAlertModal] = useState({ isOpen: false, title: '', message: '' });
 
   const [isCreateRedisModalOpen, setCreateRedisModalOpen] = useState(false);
   const [redisToDelete, setRedisToDelete] = useState<RedisInstance | null>(null);
@@ -147,14 +181,28 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
   };
 
   const handleDeleteOrg = async () => {
-    if(!orgToDelete) return;
+    if (!orgToDelete) return;
     setLoading('delete-org');
+    setError(null);
     try {
         await deleteOrganization(token, orgToDelete.id);
         setOrgToDelete(null);
         fetchOrgs();
-    } catch (err) { setError(err instanceof Error ? err.message : 'Failed to delete organization'); }
-    finally { setLoading(''); }
+    } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to delete organization';
+        if (errorMessage.includes('active Redis instances')) {
+            setAlertModal({
+                isOpen: true,
+                title: 'Deletion Failed',
+                message: 'This organization cannot be deleted because it has active Redis instances. Please remove all instances first.'
+            });
+        } else {
+            setError(errorMessage);
+        }
+        setOrgToDelete(null); // Close confirmation modal on error
+    } finally {
+        setLoading('');
+    }
   }
 
 
@@ -196,7 +244,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
   const renderHeader = () => (
       <header className="bg-slate-900/70 backdrop-blur-sm p-4 sticky top-0 z-40 border-b border-slate-700/50">
           <div className="container mx-auto flex justify-between items-center">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 cursor-pointer" onClick={() => { setSelectedOrg(null); setRedisInstances([]) }}>
                 <LogoIcon/>
                 <h1 className="text-xl font-bold text-white hidden sm:block">Cloud Dashboard</h1>
               </div>
@@ -353,6 +401,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
       </Modal>
 
       <ConfirmationModal isOpen={!!redisToDelete} onClose={() => setRedisToDelete(null)} onConfirm={handleDeleteRedis} title="Delete Redis Instance" message={`Are you sure you want to delete "${redisToDelete?.name}"? This action is permanent.`} isLoading={loading === 'delete-redis'} confirmText="Delete" />
+      
+      <AlertModal
+          isOpen={alertModal.isOpen}
+          onClose={() => setAlertModal({ isOpen: false, title: '', message: '' })}
+          title={alertModal.title}
+          message={alertModal.message}
+      />
     </>
   );
 };
