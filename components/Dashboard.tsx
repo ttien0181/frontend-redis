@@ -117,46 +117,77 @@ const InstanceDetailsView: React.FC<{ selectedOrg: Organization; selectedInstanc
     const MethodBadge: React.FC<{ method: string }> = ({ method }) => {
         const colors: { [key: string]: string } = {
             'GET': 'bg-sky-100 text-sky-800', 'POST': 'bg-green-100 text-green-800',
-            'DELETE': 'bg-red-100 text-red-800', 'ANY': 'bg-purple-100 text-purple-800'
+            'PUT': 'bg-yellow-100 text-yellow-800', 'DELETE': 'bg-red-100 text-red-800', 
+            'ANY': 'bg-purple-100 text-purple-800'
         };
         return <span className={`font-mono text-xs font-bold mr-2 px-2 py-1 rounded-md ${colors[method] || 'bg-slate-100 text-slate-800'}`}>{method}</span>
     }
 
     const allEndpoints = [
         {
-            category: 'Auth',
+            category: 'Public Routes',
+            description: 'No authentication required.',
             endpoints: [
-                { method: 'POST', path: '/api/auth/login', description: 'Đăng nhập, trả JWT token' },
+                { method: 'GET', path: '/health', description: 'Performs a system health check.' },
+                { method: 'GET', path: '/version', description: 'Gets the current version of the system.' },
+                { method: 'GET', path: '/stats', description: 'Retrieves database statistics.' },
+                { method: 'POST', path: '/auth/register', description: 'Registers a new user account.' },
+                { method: 'POST', path: '/auth/login', description: 'Logs in a user and returns a JWT token.' },
             ]
         },
         {
             category: 'Organizations',
+            description: 'Requires user authentication (JWT Bearer Token).',
             endpoints: [
-                { method: 'POST', path: '/api/organizations', description: 'Tạo organization mới' },
-                { method: 'GET', path: '/api/organizations', description: 'Lấy danh sách organizations' },
-                { method: 'GET', path: '/api/organizations/:id', description: 'Lấy chi tiết organization' },
-                { method: 'DELETE', path: '/api/organizations/:id', description: 'Xoá organization' },
+                { method: 'POST', path: '/api/organizations', description: 'Creates a new organization.' },
+                { method: 'GET', path: '/api/organizations', description: 'Lists all accessible organizations.' },
+                { method: 'GET', path: '/api/organizations/:org_id', description: 'Gets details for a specific organization.' },
+                { method: 'PUT', path: '/api/organizations/:org_id', description: 'Updates a specific organization.' },
+                { method: 'DELETE', path: '/api/organizations/:org_id', description: 'Deletes a specific organization.' },
+            ]
+        },
+        {
+            category: 'API Keys',
+            description: 'Requires user authentication (JWT Bearer Token).',
+            endpoints: [
+                { method: 'POST', path: '/api/organizations/:org_id/api-keys', description: 'Creates a new API key for an organization.' },
+                { method: 'GET', path: '/api/organizations/:org_id/api-keys', description: 'Lists all API keys for an organization.' },
+                { method: 'GET', path: '/api/organizations/:org_id/api-keys/:key_id', description: 'Gets details for a specific API key.' },
+                { method: 'DELETE', path: '/api/organizations/:org_id/api-keys/:key_id', description: 'Revokes a specific API key.' },
             ]
         },
         {
             category: 'Redis Instances',
+            description: 'Requires user authentication (JWT Bearer Token).',
             endpoints: [
-                { method: 'POST', path: '/api/organizations/:org_id/redis-instances', description: 'Tạo Redis instance mới' },
-                { method: 'GET', path: '/api/organizations/:org_id/redis-instances', description: 'Lấy danh sách Redis instances' },
-                { method: 'GET', path: '/api/organizations/:org_id/redis-instances/:id', description: 'Lấy chi tiết Redis instance' },
-                { method: 'DELETE', path: '/api/organizations/:org_id/redis-instances/:id', description: 'Xoá Redis instance' },
+                { method: 'POST', path: '/api/organizations/:org_id/redis-instances', description: 'Creates a new Redis instance.' },
+                { method: 'GET', path: '/api/organizations/:org_id/redis-instances', description: 'Lists all Redis instances in an organization.' },
+                { method: 'GET', path: '/api/organizations/:org_id/redis-instances/:instance_id', description: 'Gets details for a specific Redis instance.' },
+                { method: 'PUT', path: '/api/organizations/:org_id/redis-instances/:instance_id/status', description: 'Updates the status of a Redis instance.' },
+                { method: 'DELETE', path: '/api/organizations/:org_id/redis-instances/:instance_id', description: 'Deletes a specific Redis instance.' },
             ]
         },
         {
-            category: 'Redis Commands',
+            category: 'Redis HTTP API',
+            description: 'Requires API key authentication.',
             endpoints: [
-                { method: 'ANY', path: '/api/organizations/:org_id/redis-instances/:instance_id/command/*command_parts', description: 'Gửi command Redis qua HTTP (proxy)' },
+                { method: 'GET', path: '/redis/:instance_id/ping', description: 'Pings the Redis instance.' },
+                { method: 'GET', path: '/redis/:instance_id/set/:key/:value', description: 'Sets a key with a value.' },
+                { method: 'GET', path: '/redis/:instance_id/get/:key', description: 'Gets the value of a key.' },
+                { method: 'GET', path: '/redis/:instance_id/del/:key', description: 'Deletes a key.' },
+                { method: 'GET', path: '/redis/:instance_id/incr/:key', description: 'Increments the value of a key.' },
+                { method: 'GET', path: '/redis/:instance_id/hset/:key/:field/:value', description: 'Sets a field in a hash.' },
+                { method: 'GET', path: '/redis/:instance_id/hget/:key/:field', description: 'Gets a field from a hash.' },
+                { method: 'GET', path: '/redis/:instance_id/lpush/:key/:value', description: 'Prepends a value to a list.' },
+                { method: 'GET', path: '/redis/:instance_id/lpop/:key', description: 'Removes and gets the first element in a list.' },
             ]
         },
         {
-            category: 'Misc',
+            category: 'Generic Redis Commands',
+            description: 'Requires API key authentication.',
             endpoints: [
-                { method: 'GET', path: '/health', description: 'Kiểm tra server còn sống' },
+                { method: 'POST', path: '/redis/:instance_id', description: 'Executes a generic Redis command via JSON body.' },
+                { method: 'GET', path: '/redis/:instance_id/*path', description: 'Catch-all route for debugging Redis requests.' },
             ]
         },
     ];
@@ -164,13 +195,12 @@ const InstanceDetailsView: React.FC<{ selectedOrg: Organization; selectedInstanc
     const getEndpointUrl = (path: string) => {
         let url = path
             .replace(':org_id', selectedOrg.id)
-            .replace(':instance_id', selectedInstance.id);
-        
-        if (path.includes('/redis-instances/')) {
-            url = url.replace(':id', selectedInstance.id);
-        } else {
-            url = url.replace(':id', selectedOrg.id);
-        }
+            .replace(':instance_id', selectedInstance.id)
+            .replace(':key_id', '{key_id}')
+            .replace('/:key', '/{key}')
+            .replace('/:value', '/{value}')
+            .replace(':field', '{field}')
+            .replace('/*path', '/{...path}');
 
         return `${BASE_API_URL}${url}`;
     };
@@ -183,21 +213,22 @@ const InstanceDetailsView: React.FC<{ selectedOrg: Organization; selectedInstanc
                         <ArrowLeftIcon />
                     </button>
                     <div>
-                        <h2 className="text-xl md:text-3xl font-bold text-slate-900 truncate">{selectedInstance.name}</h2>
+                        <h2 className="text-xl md:text-3xl font-bold text-slate-900 truncate">{selectedInstance.name} - API Guide</h2>
                         <p className="text-slate-500 font-mono text-sm">{selectedInstance.domain}</p>
                     </div>
                 </div>
             </div>
             {allEndpoints.map(category => (
                 <div key={category.category} className="mb-8">
-                    <h3 className="text-2xl font-bold text-slate-800 mb-4 border-b pb-2">{category.category}</h3>
+                    <h3 className="text-2xl font-bold text-slate-800 mb-2">{category.category}</h3>
+                    <p className="text-slate-500 mb-4 border-b pb-3">{category.description}</p>
                     <div className="bg-white border border-slate-200 rounded-xl shadow-md overflow-hidden">
                         <div className="overflow-x-auto">
                              <table className="w-full text-left">
                                 <thead className="bg-slate-50">
                                     <tr>
                                         <th className="p-4 font-semibold text-slate-600">Endpoint</th>
-                                        <th className="p-4 font-semibold text-slate-600">Chức năng</th>
+                                        <th className="p-4 font-semibold text-slate-600">Description</th>
                                         <th className="p-4 font-semibold text-slate-600"></th>
                                     </tr>
                                 </thead>
@@ -493,9 +524,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
   const formFieldClasses = "w-full p-2 bg-slate-100 border border-slate-300 rounded-md text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition";
   
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
       {renderHeader()}
-      <main className="container mx-auto p-4 md:p-8">
+      <main className="flex-grow container mx-auto p-4 md:p-8">
         {showLandingPage ? (
             <LandingPage onGetStarted={() => setShowLandingPage(false)} />
         ) : selectedInstance && selectedOrg ? (
@@ -510,6 +541,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
             renderOrganizations()
         )}
       </main>
+
+      <footer className="bg-white border-t border-slate-200 py-6 mt-8">
+          <div className="container mx-auto text-center text-slate-500 text-sm">
+              <div className="flex justify-center gap-6 mb-2">
+                  <a href="#" className="hover:text-indigo-600 transition-colors">Docs</a>
+                  <a href="#" className="hover:text-indigo-600 transition-colors">User Guides</a>
+                  <a href="#" className="hover:text-indigo-600 transition-colors">Terms of Service</a>
+              </div>
+              <p>&copy; {new Date().getFullYear()} Redis Cloud Dashboard. All rights reserved.</p>
+          </div>
+      </footer>
 
       {/* --- Modals --- */}
       <Modal isOpen={isCreateOrgModalOpen} onClose={() => setCreateOrgModalOpen(false)} title="Create New Organization">
@@ -570,7 +612,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
           title={alertModal.title}
           message={alertModal.message}
       />
-    </>
+    </div>
   );
 };
 
