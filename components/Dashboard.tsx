@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Organization, RedisInstance, User } from '../types';
 import { getOrganizations, getRedisInstances, createOrganization, createRedisInstance, updateOrganization, deleteOrganization, deleteRedisInstance } from '../services/api';
-import { BuildingOfficeIcon, DatabaseIcon, PlusIcon, LogoutIcon, ArrowLeftIcon, SpinnerIcon, EditIcon, DeleteIcon, LogoIcon, WarningIcon } from './ui/Icons';
+import { BuildingOfficeIcon, DatabaseIcon, PlusIcon, LogoutIcon, ArrowLeftIcon, SpinnerIcon, EditIcon, DeleteIcon, LogoIcon, WarningIcon, CopyIcon, CheckIcon } from './ui/Icons';
+import LandingPage from './LandingPage';
 
 interface DashboardProps {
   user: User;
@@ -101,6 +102,132 @@ const AlertModal: React.FC<AlertModalProps> = ({ isOpen, onClose, title, message
     );
 };
 
+const InstanceDetailsView: React.FC<{ selectedOrg: Organization; selectedInstance: RedisInstance; onBack: () => void; }> = ({ selectedOrg, selectedInstance, onBack }) => {
+    const [copiedText, setCopiedText] = useState('');
+
+    const handleCopy = (text: string) => {
+        navigator.clipboard.writeText(text).then(() => {
+            setCopiedText(text);
+            setTimeout(() => setCopiedText(''), 2000);
+        });
+    };
+    
+    const BASE_API_URL = 'http://localhost:8080';
+
+    const MethodBadge: React.FC<{ method: string }> = ({ method }) => {
+        const colors: { [key: string]: string } = {
+            'GET': 'bg-sky-100 text-sky-800', 'POST': 'bg-green-100 text-green-800',
+            'DELETE': 'bg-red-100 text-red-800', 'ANY': 'bg-purple-100 text-purple-800'
+        };
+        return <span className={`font-mono text-xs font-bold mr-2 px-2 py-1 rounded-md ${colors[method] || 'bg-slate-100 text-slate-800'}`}>{method}</span>
+    }
+
+    const allEndpoints = [
+        {
+            category: 'Auth',
+            endpoints: [
+                { method: 'POST', path: '/api/auth/login', description: 'Đăng nhập, trả JWT token' },
+            ]
+        },
+        {
+            category: 'Organizations',
+            endpoints: [
+                { method: 'POST', path: '/api/organizations', description: 'Tạo organization mới' },
+                { method: 'GET', path: '/api/organizations', description: 'Lấy danh sách organizations' },
+                { method: 'GET', path: '/api/organizations/:id', description: 'Lấy chi tiết organization' },
+                { method: 'DELETE', path: '/api/organizations/:id', description: 'Xoá organization' },
+            ]
+        },
+        {
+            category: 'Redis Instances',
+            endpoints: [
+                { method: 'POST', path: '/api/organizations/:org_id/redis-instances', description: 'Tạo Redis instance mới' },
+                { method: 'GET', path: '/api/organizations/:org_id/redis-instances', description: 'Lấy danh sách Redis instances' },
+                { method: 'GET', path: '/api/organizations/:org_id/redis-instances/:id', description: 'Lấy chi tiết Redis instance' },
+                { method: 'DELETE', path: '/api/organizations/:org_id/redis-instances/:id', description: 'Xoá Redis instance' },
+            ]
+        },
+        {
+            category: 'Redis Commands',
+            endpoints: [
+                { method: 'ANY', path: '/api/organizations/:org_id/redis-instances/:instance_id/command/*command_parts', description: 'Gửi command Redis qua HTTP (proxy)' },
+            ]
+        },
+        {
+            category: 'Misc',
+            endpoints: [
+                { method: 'GET', path: '/health', description: 'Kiểm tra server còn sống' },
+            ]
+        },
+    ];
+
+    const getEndpointUrl = (path: string) => {
+        let url = path
+            .replace(':org_id', selectedOrg.id)
+            .replace(':instance_id', selectedInstance.id);
+        
+        if (path.includes('/redis-instances/')) {
+            url = url.replace(':id', selectedInstance.id);
+        } else {
+            url = url.replace(':id', selectedOrg.id);
+        }
+
+        return `${BASE_API_URL}${url}`;
+    };
+
+    return (
+        <div className="animate-fade-in">
+             <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-4">
+                    <button onClick={onBack} className="flex items-center gap-2 p-2 rounded-md hover:bg-slate-200 text-slate-500 hover:text-slate-900">
+                        <ArrowLeftIcon />
+                    </button>
+                    <div>
+                        <h2 className="text-xl md:text-3xl font-bold text-slate-900 truncate">{selectedInstance.name}</h2>
+                        <p className="text-slate-500 font-mono text-sm">{selectedInstance.domain}</p>
+                    </div>
+                </div>
+            </div>
+            {allEndpoints.map(category => (
+                <div key={category.category} className="mb-8">
+                    <h3 className="text-2xl font-bold text-slate-800 mb-4 border-b pb-2">{category.category}</h3>
+                    <div className="bg-white border border-slate-200 rounded-xl shadow-md overflow-hidden">
+                        <div className="overflow-x-auto">
+                             <table className="w-full text-left">
+                                <thead className="bg-slate-50">
+                                    <tr>
+                                        <th className="p-4 font-semibold text-slate-600">Endpoint</th>
+                                        <th className="p-4 font-semibold text-slate-600">Chức năng</th>
+                                        <th className="p-4 font-semibold text-slate-600"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {category.endpoints.map(ep => {
+                                        const fullUrl = getEndpointUrl(ep.path);
+                                        return (
+                                            <tr key={ep.path} className="border-t border-slate-200">
+                                                <td className="p-4">
+                                                    <MethodBadge method={ep.method} />
+                                                    <span className="font-mono text-sm text-slate-700 break-all">{fullUrl}</span>
+                                                </td>
+                                                <td className="p-4 text-slate-600">{ep.description}</td>
+                                                <td className="p-4 text-right">
+                                                    <button onClick={() => handleCopy(fullUrl)} className="flex items-center gap-1.5 text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-md transition-colors">
+                                                        {copiedText === fullUrl ? <><CheckIcon /> Copied</> : <><CopyIcon /> Copy</>}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                             </table>
+                        </div>
+                    </div>
+                </div>
+            ))}
+        </div>
+    )
+}
 
 const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -108,6 +235,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
   const [redisInstances, setRedisInstances] = useState<RedisInstance[]>([]);
   const [loading, setLoading] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // View management state
+  const [showLandingPage, setShowLandingPage] = useState(true);
+  const [selectedInstance, setSelectedInstance] = useState<RedisInstance | null>(null);
 
   // Modals state
   const [isCreateOrgModalOpen, setCreateOrgModalOpen] = useState(false);
@@ -150,9 +281,28 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
     } finally { setLoading(''); }
   }, [token]);
   
+  // Initial fetch when an org is selected
   useEffect(() => {
       if (selectedOrg) { fetchRedisInstances(selectedOrg.id); }
   }, [selectedOrg, fetchRedisInstances]);
+
+  // Polling for Redis instance status updates
+  useEffect(() => {
+    if (!selectedOrg || !!selectedInstance) {
+      return; // Stop polling if no org is selected or if we are in instance detail view
+    }
+
+    const intervalId = setInterval(async () => {
+      try {
+        const data = await getRedisInstances(token, selectedOrg.id);
+        setRedisInstances(data.items);
+      } catch (err) {
+        console.error("Polling error:", err);
+      }
+    }, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(intervalId); // Cleanup interval on component unmount or when dependencies change
+  }, [selectedOrg, selectedInstance, token]);
 
   // --- ORG HANDLERS ---
   const handleCreateOrg = async (e: React.FormEvent) => {
@@ -244,7 +394,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
   const renderHeader = () => (
       <header className="bg-white/80 backdrop-blur-sm p-4 sticky top-0 z-40 border-b border-slate-200">
           <div className="container mx-auto flex justify-between items-center">
-              <div className="flex items-center gap-3 cursor-pointer" onClick={() => { setSelectedOrg(null); setRedisInstances([]) }}>
+              <div className="flex items-center gap-3 cursor-pointer" onClick={() => { setSelectedOrg(null); setSelectedInstance(null); setShowLandingPage(true); }}>
                 <LogoIcon/>
                 <h1 className="text-xl font-bold text-slate-900 hidden sm:block">Cloud Dashboard</h1>
               </div>
@@ -277,7 +427,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
                             <button onClick={(e) => { e.stopPropagation(); setOrgToEdit(org); setEditOrgModalOpen(true); }} className="p-2 rounded-full bg-slate-100 hover:bg-indigo-500 text-slate-500 hover:text-white"><EditIcon /></button>
                             <button onClick={(e) => { e.stopPropagation(); setOrgToDelete(org); }} className="p-2 rounded-full bg-slate-100 hover:bg-red-500 text-slate-500 hover:text-white"><DeleteIcon /></button>
                         </div>
-                        <div onClick={() => setSelectedOrg(org)} className="cursor-pointer">
+                        <div onClick={() => { setSelectedOrg(org); setShowLandingPage(false); }} className="cursor-pointer">
                             <div className="flex items-center gap-4 mb-3">
                                 <div className="p-2 bg-slate-100 rounded-lg"><BuildingOfficeIcon /></div>
                                 <h3 className="text-xl font-semibold text-slate-800">{org.name}</h3>
@@ -296,7 +446,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
       <div>
           <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-4">
-                  <button onClick={() => { setSelectedOrg(null); setRedisInstances([]) }} className="flex items-center gap-2 p-2 rounded-md hover:bg-slate-200 text-slate-500 hover:text-slate-900">
+                  <button onClick={() => { setSelectedOrg(null); setSelectedInstance(null); }} className="flex items-center gap-2 p-2 rounded-md hover:bg-slate-200 text-slate-500 hover:text-slate-900">
                       <ArrowLeftIcon />
                   </button>
                   <h2 className="text-xl md:text-3xl font-bold text-slate-900 truncate">{selectedOrg?.name} / Instances</h2>
@@ -323,13 +473,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
                         </thead>
                         <tbody>
                             {redisInstances.map(inst => (
-                                <tr key={inst.id} className="border-t border-slate-200 hover:bg-slate-50 transition-colors">
+                                <tr key={inst.id} className="border-t border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setSelectedInstance(inst)}>
                                     <td className="p-4 flex items-center gap-3 text-slate-700"><DatabaseIcon /> {inst.name}</td>
                                     <td className="p-4"><StatusBadge status={inst.status} /></td>
                                     <td className="p-4 font-mono text-sm text-slate-500 truncate max-w-xs">{inst.domain}</td>
                                     <td className="p-4 text-slate-700">v{inst.redis_version}</td>
                                     <td className="p-4 text-slate-700">{(inst.max_memory / (1024 * 1024)).toFixed(0)} MB</td>
-                                    <td className="p-4"><button onClick={() => setRedisToDelete(inst)} className="p-2 rounded-full bg-slate-100 hover:bg-red-500 text-slate-500 hover:text-white"><DeleteIcon /></button></td>
+                                    <td className="p-4"><button onClick={(e) => { e.stopPropagation(); setRedisToDelete(inst); }} className="p-2 rounded-full bg-slate-100 hover:bg-red-500 text-slate-500 hover:text-white"><DeleteIcon /></button></td>
                                 </tr>
                             ))}
                         </tbody>
@@ -346,7 +496,19 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
     <>
       {renderHeader()}
       <main className="container mx-auto p-4 md:p-8">
-        {selectedOrg ? renderRedisInstances() : renderOrganizations()}
+        {showLandingPage ? (
+            <LandingPage onGetStarted={() => setShowLandingPage(false)} />
+        ) : selectedInstance && selectedOrg ? (
+            <InstanceDetailsView 
+              selectedInstance={selectedInstance}
+              selectedOrg={selectedOrg}
+              onBack={() => setSelectedInstance(null)}
+            />
+        ) : selectedOrg ? (
+            renderRedisInstances()
+        ) : (
+            renderOrganizations()
+        )}
       </main>
 
       {/* --- Modals --- */}
