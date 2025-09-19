@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Organization, RedisInstance, User } from '../types';
 import { getOrganizations, getRedisInstances, createOrganization, createRedisInstance, updateOrganization, deleteOrganization, deleteRedisInstance } from '../services/api';
-import { BuildingOfficeIcon, DatabaseIcon, PlusIcon, LogoutIcon, ArrowLeftIcon, SpinnerIcon, EditIcon, DeleteIcon, LogoIcon, WarningIcon, CopyIcon, CheckIcon } from './ui/Icons';
+import { BuildingOfficeIcon, DatabaseIcon, PlusIcon, LogoutIcon, ArrowLeftIcon, SpinnerIcon, EditIcon, DeleteIcon, LogoIcon, WarningIcon, CopyIcon, CheckIcon, HamburgerIcon, CloseIcon } from './ui/Icons';
 import LandingPage from './LandingPage';
+import DocsPage from './DocsPage';
+import UserGuidesPage from './UserGuidesPage';
+import TermsOfServicePage from './TermsOfServicePage';
 
 interface DashboardProps {
   user: User;
@@ -125,51 +128,8 @@ const InstanceDetailsView: React.FC<{ selectedOrg: Organization; selectedInstanc
 
     const allEndpoints = [
         {
-            category: 'Public Routes',
-            description: 'No authentication required.',
-            endpoints: [
-                { method: 'GET', path: '/health', description: 'Performs a system health check.' },
-                { method: 'GET', path: '/version', description: 'Gets the current version of the system.' },
-                { method: 'GET', path: '/stats', description: 'Retrieves database statistics.' },
-                { method: 'POST', path: '/auth/register', description: 'Registers a new user account.' },
-                { method: 'POST', path: '/auth/login', description: 'Logs in a user and returns a JWT token.' },
-            ]
-        },
-        {
-            category: 'Organizations',
-            description: 'Requires user authentication (JWT Bearer Token).',
-            endpoints: [
-                { method: 'POST', path: '/api/organizations', description: 'Creates a new organization.' },
-                { method: 'GET', path: '/api/organizations', description: 'Lists all accessible organizations.' },
-                { method: 'GET', path: '/api/organizations/:org_id', description: 'Gets details for a specific organization.' },
-                { method: 'PUT', path: '/api/organizations/:org_id', description: 'Updates a specific organization.' },
-                { method: 'DELETE', path: '/api/organizations/:org_id', description: 'Deletes a specific organization.' },
-            ]
-        },
-        {
-            category: 'API Keys',
-            description: 'Requires user authentication (JWT Bearer Token).',
-            endpoints: [
-                { method: 'POST', path: '/api/organizations/:org_id/api-keys', description: 'Creates a new API key for an organization.' },
-                { method: 'GET', path: '/api/organizations/:org_id/api-keys', description: 'Lists all API keys for an organization.' },
-                { method: 'GET', path: '/api/organizations/:org_id/api-keys/:key_id', description: 'Gets details for a specific API key.' },
-                { method: 'DELETE', path: '/api/organizations/:org_id/api-keys/:key_id', description: 'Revokes a specific API key.' },
-            ]
-        },
-        {
-            category: 'Redis Instances',
-            description: 'Requires user authentication (JWT Bearer Token).',
-            endpoints: [
-                { method: 'POST', path: '/api/organizations/:org_id/redis-instances', description: 'Creates a new Redis instance.' },
-                { method: 'GET', path: '/api/organizations/:org_id/redis-instances', description: 'Lists all Redis instances in an organization.' },
-                { method: 'GET', path: '/api/organizations/:org_id/redis-instances/:instance_id', description: 'Gets details for a specific Redis instance.' },
-                { method: 'PUT', path: '/api/organizations/:org_id/redis-instances/:instance_id/status', description: 'Updates the status of a Redis instance.' },
-                { method: 'DELETE', path: '/api/organizations/:org_id/redis-instances/:instance_id', description: 'Deletes a specific Redis instance.' },
-            ]
-        },
-        {
             category: 'Redis HTTP API',
-            description: 'Requires API key authentication.',
+            description: 'Requires API key authentication. The endpoints below are pre-filled with your instance ID for convenience.',
             endpoints: [
                 { method: 'GET', path: '/redis/:instance_id/ping', description: 'Pings the Redis instance.' },
                 { method: 'GET', path: '/redis/:instance_id/set/:key/:value', description: 'Sets a key with a value.' },
@@ -261,6 +221,8 @@ const InstanceDetailsView: React.FC<{ selectedOrg: Organization; selectedInstanc
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
+  type View = 'dashboard' | 'docs' | 'guides' | 'terms';
+  
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [redisInstances, setRedisInstances] = useState<RedisInstance[]>([]);
@@ -268,8 +230,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
   const [error, setError] = useState<string | null>(null);
 
   // View management state
+  const [currentView, setCurrentView] = useState<View>('dashboard');
   const [showLandingPage, setShowLandingPage] = useState(true);
   const [selectedInstance, setSelectedInstance] = useState<RedisInstance | null>(null);
+  const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
+
 
   // Modals state
   const [isCreateOrgModalOpen, setCreateOrgModalOpen] = useState(false);
@@ -298,7 +263,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
     finally { setLoading(''); }
   }, [token]);
 
-  useEffect(() => { fetchOrgs(); }, [fetchOrgs]);
+  useEffect(() => { 
+      if(currentView === 'dashboard') {
+          fetchOrgs(); 
+      }
+  }, [fetchOrgs, currentView]);
 
   const fetchRedisInstances = useCallback(async (orgId: string) => {
     setLoading('redis');
@@ -319,8 +288,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
 
   // Polling for Redis instance status updates
   useEffect(() => {
-    if (!selectedOrg || !!selectedInstance) {
-      return; // Stop polling if no org is selected or if we are in instance detail view
+    if (!selectedOrg || !!selectedInstance || currentView !== 'dashboard') {
+      return; // Stop polling if no org is selected or if we are in instance detail view or not on dashboard
     }
 
     const intervalId = setInterval(async () => {
@@ -333,7 +302,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
     }, 5000); // Poll every 5 seconds
 
     return () => clearInterval(intervalId); // Cleanup interval on component unmount or when dependencies change
-  }, [selectedOrg, selectedInstance, token]);
+  }, [selectedOrg, selectedInstance, token, currentView]);
+
+  const handleNavigate = (view: View) => {
+    setCurrentView(view);
+    setSelectedOrg(null);
+    setSelectedInstance(null);
+    setShowLandingPage(true); // Reset to landing for dashboard view
+  }
 
   // --- ORG HANDLERS ---
   const handleCreateOrg = async (e: React.FormEvent) => {
@@ -369,6 +345,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
         await deleteOrganization(token, orgToDelete.id);
         setOrgToDelete(null);
         fetchOrgs();
+        setSelectedOrg(null); // Deselect if it was the selected one
     } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to delete organization';
         if (errorMessage.includes('active Redis instances')) {
@@ -422,21 +399,49 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
     return <span className={`px-2 py-1 text-xs font-medium rounded-full border ${colorMap[status] || colorMap['stopped']}`}>{status}</span>
   };
 
+  const NavLink: React.FC<{ view: View, current: View, children: React.ReactNode, setView: (view: View) => void }> = ({ view, current, children, setView }) => (
+    <button 
+        onClick={() => setView(view)} 
+        className={`text-sm font-medium transition-colors p-2 rounded-md ${current === view ? 'text-indigo-600 bg-indigo-50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'}`}
+    >
+        {children}
+    </button>
+  );
+
   const renderHeader = () => (
       <header className="bg-white/80 backdrop-blur-sm p-4 sticky top-0 z-40 border-b border-slate-200">
           <div className="container mx-auto flex justify-between items-center">
-              <div className="flex items-center gap-3 cursor-pointer" onClick={() => { setSelectedOrg(null); setSelectedInstance(null); setShowLandingPage(true); }}>
-                <LogoIcon/>
-                <h1 className="text-xl font-bold text-slate-900 hidden sm:block">Cloud Dashboard</h1>
+              <div className="flex items-center gap-2 sm:gap-6">
+                <button className="flex items-center gap-3" onClick={() => handleNavigate('dashboard')}>
+                    <LogoIcon/>
+                    <h1 className="text-xl font-bold text-slate-900 hidden sm:block">Cloud Dashboard</h1>
+                </button>
+                <nav className="hidden lg:flex items-center gap-2">
+                    <NavLink view="docs" current={currentView} setView={handleNavigate}>Docs</NavLink>
+                    <NavLink view="guides" current={currentView} setView={handleNavigate}>User Guides</NavLink>
+                    <NavLink view="terms" current={currentView} setView={handleNavigate}>Terms of Service</NavLink>
+                </nav>
               </div>
               <div className="flex items-center gap-4">
-                  <span className="text-slate-600 hidden md:block">{user.first_name} {user.last_name}</span>
+                  <span className="text-slate-600 hidden lg:block">{user.first_name} {user.last_name}</span>
                   <button onClick={onLogout} className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors p-2 rounded-md hover:bg-slate-100">
                       <LogoutIcon />
-                      Logout
+                      <span className="hidden sm:inline">Logout</span>
                   </button>
+                  <div className="lg:hidden">
+                    <button onClick={() => setMobileMenuOpen(!isMobileMenuOpen)} className="p-2 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100">
+                        {isMobileMenuOpen ? <CloseIcon /> : <HamburgerIcon />}
+                    </button>
+                  </div>
               </div>
           </div>
+          {isMobileMenuOpen && (
+              <nav className="lg:hidden mt-4 container mx-auto flex flex-col items-start gap-2 animate-fade-in-down">
+                  <NavLink view="docs" current={currentView} setView={(v) => { handleNavigate(v); setMobileMenuOpen(false); }}>Docs</NavLink>
+                  <NavLink view="guides" current={currentView} setView={(v) => { handleNavigate(v); setMobileMenuOpen(false); }}>User Guides</NavLink>
+                  <NavLink view="terms" current={currentView} setView={(v) => { handleNavigate(v); setMobileMenuOpen(false); }}>Terms of Service</NavLink>
+              </nav>
+          )}
       </header>
   );
 
@@ -520,35 +525,47 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
            ) : <div className="text-center py-10 bg-white rounded-lg border border-slate-200"><p className="text-slate-500">No Redis instances found. Create one to get started.</p></div>}
       </div>
   );
+
+  const renderDashboardContent = () => {
+    if (showLandingPage) {
+        return <LandingPage onGetStarted={() => setShowLandingPage(false)} />;
+    }
+    if (selectedInstance && selectedOrg) {
+        return <InstanceDetailsView 
+                selectedInstance={selectedInstance}
+                selectedOrg={selectedOrg}
+                onBack={() => setSelectedInstance(null)}
+              />;
+    }
+    if (selectedOrg) {
+        return renderRedisInstances();
+    }
+    return renderOrganizations();
+  }
   
   const formFieldClasses = "w-full p-2 bg-slate-100 border border-slate-300 rounded-md text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition";
   
   return (
     <div className="flex flex-col min-h-screen">
+      <style>{`
+        @keyframes fadeInDown {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-down {
+          animation: fadeInDown 0.3s ease-out forwards;
+        }
+      `}</style>
       {renderHeader()}
       <main className="flex-grow container mx-auto p-4 md:p-8">
-        {showLandingPage ? (
-            <LandingPage onGetStarted={() => setShowLandingPage(false)} />
-        ) : selectedInstance && selectedOrg ? (
-            <InstanceDetailsView 
-              selectedInstance={selectedInstance}
-              selectedOrg={selectedOrg}
-              onBack={() => setSelectedInstance(null)}
-            />
-        ) : selectedOrg ? (
-            renderRedisInstances()
-        ) : (
-            renderOrganizations()
-        )}
+        {currentView === 'dashboard' && renderDashboardContent()}
+        {currentView === 'docs' && <DocsPage />}
+        {currentView === 'guides' && <UserGuidesPage onNavigate={handleNavigate} />}
+        {currentView === 'terms' && <TermsOfServicePage />}
       </main>
 
       <footer className="bg-white border-t border-slate-200 py-6 mt-8">
           <div className="container mx-auto text-center text-slate-500 text-sm">
-              <div className="flex justify-center gap-6 mb-2">
-                  <a href="#" className="hover:text-indigo-600 transition-colors">Docs</a>
-                  <a href="#" className="hover:text-indigo-600 transition-colors">User Guides</a>
-                  <a href="#" className="hover:text-indigo-600 transition-colors">Terms of Service</a>
-              </div>
               <p>&copy; {new Date().getFullYear()} Redis Cloud Dashboard. All rights reserved.</p>
           </div>
       </footer>
