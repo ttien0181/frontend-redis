@@ -530,14 +530,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
                     <NavLink view="docs" current={currentView} setView={handleNavigate}>Docs</NavLink>
                     <NavLink view="guides" current={currentView} setView={handleNavigate}>User Guides</NavLink>
                     <NavLink view="terms" current={currentView} setView={handleNavigate}>Terms of Service</NavLink>
+                    <button onClick={onLogout} className="text-sm font-medium transition-colors p-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                      Logout
+                    </button>
                 </nav>
               </div>
               <div className="flex items-center gap-4">
                   <span className="text-slate-600 hidden lg:block">{user.first_name} {user.last_name}</span>
-                  <button onClick={onLogout} className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors p-2 rounded-md hover:bg-slate-100">
-                      <LogoutIcon />
-                      <span className="hidden sm:inline">Logout</span>
-                  </button>
                   <div className="lg:hidden">
                     <button onClick={() => setMobileMenuOpen(!isMobileMenuOpen)} className="p-2 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100">
                         {isMobileMenuOpen ? <CloseIcon /> : <HamburgerIcon />}
@@ -550,6 +549,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
                   <NavLink view="docs" current={currentView} setView={handleNavigate}>Docs</NavLink>
                   <NavLink view="guides" current={currentView} setView={handleNavigate}>User Guides</NavLink>
                   <NavLink view="terms" current={currentView} setView={handleNavigate}>Terms of Service</NavLink>
+                  <button 
+                    onClick={() => { onLogout(); setMobileMenuOpen(false); }} 
+                    className="w-full text-left text-sm font-medium transition-colors p-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  >
+                    Logout
+                  </button>
               </nav>
           )}
       </header>

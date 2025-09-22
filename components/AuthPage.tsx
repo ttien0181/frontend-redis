@@ -30,10 +30,18 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
     setLoading(true);
     setError(null);
 
-    if (!isLoginView && formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match.");
-      setLoading(false);
-      return;
+    // Enhanced client-side validation for registration
+    if (!isLoginView) {
+      if (formData.password.length < 8) {
+        setError("Password must be at least 8 characters long.");
+        setLoading(false);
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        setError("Passwords do not match.");
+        setLoading(false);
+        return;
+      }
     }
 
     try {
@@ -49,7 +57,27 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
         setFormData({ ...formData, password: '', confirmPassword: ''});
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
+      if (err instanceof Error) {
+        const errorMessage = err.message;
+        
+        if (errorMessage.toLowerCase().includes('failed to fetch')) {
+          setError('Could not connect to the server. Please check your network and try again.');
+        } else if (errorMessage.includes("User already exists with this email or username")) {
+            setError("An account with this email already exists.");
+        } else if (errorMessage.includes("Validation error") && errorMessage.includes('"username"')) {
+            const minMatch = errorMessage.match(/"min":\s*Number\((\d+)\)/);
+            const maxMatch = errorMessage.match(/"max":\s*Number\((\d+)\)/);
+            if (errorMessage.includes('"length"') && minMatch && maxMatch) {
+                setError(`Username must be between ${minMatch[1]} and ${maxMatch[1]} characters.`);
+            } else {
+                setError("There is an issue with the username provided. Please check it and try again.");
+            }
+        } else {
+          setError(errorMessage);
+        }
+      } else {
+        setError('An unexpected error occurred.');
+      }
     } finally {
       setLoading(false);
     }
