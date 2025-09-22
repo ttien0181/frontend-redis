@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Organization, RedisInstance, User } from '../types';
 import { getOrganizations, getRedisInstances, createOrganization, createRedisInstance, updateOrganization, deleteOrganization, deleteRedisInstance } from '../services/api';
-import { BuildingOfficeIcon, DatabaseIcon, PlusIcon, LogoutIcon, ArrowLeftIcon, SpinnerIcon, EditIcon, DeleteIcon, LogoIcon, WarningIcon, CopyIcon, CheckIcon, HamburgerIcon, CloseIcon } from './ui/Icons';
+import { BuildingOfficeIcon, DatabaseIcon, PlusIcon, LogoutIcon, ArrowLeftIcon, SpinnerIcon, EditIcon, DeleteIcon, LogoIcon, WarningIcon, CopyIcon, CheckIcon, HamburgerIcon, CloseIcon, UserIcon } from './ui/Icons';
 import LandingPage from './LandingPage';
 import DocsPage from './DocsPage';
 import UserGuidesPage from './UserGuidesPage';
@@ -312,7 +312,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
 
   const [selectedInstance, setSelectedInstance] = useState<RedisInstance | null>(null);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
-
+  const [isUserMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Modals state
   const [isCreateOrgModalOpen, setCreateOrgModalOpen] = useState(false);
@@ -349,6 +350,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
           fetchOrgs(); 
       }
   }, [fetchOrgs, currentView]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+        if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+            setUserMenuOpen(false);
+        }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [userMenuRef]);
 
   const fetchRedisInstances = useCallback(async (orgId: string) => {
     setLoading('redis');
@@ -545,17 +558,39 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
                     <NavLink view="docs" current={currentView} setView={handleNavigate}>Docs</NavLink>
                     <NavLink view="guides" current={currentView} setView={handleNavigate}>User Guides</NavLink>
                     <NavLink view="terms" current={currentView} setView={handleNavigate}>Terms of Service</NavLink>
-                    <button onClick={onLogout} className="text-sm font-medium transition-colors p-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100">
-                      Logout
-                    </button>
                 </nav>
               </div>
-              <div className="flex items-center gap-4">
-                  <span className="text-slate-600 hidden lg:block">{user.first_name} {user.last_name}</span>
+              <div className="flex items-center gap-2">
                   <div className="lg:hidden">
                     <button onClick={() => setMobileMenuOpen(!isMobileMenuOpen)} className="p-2 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100">
                         {isMobileMenuOpen ? <CloseIcon /> : <HamburgerIcon />}
                     </button>
+                  </div>
+                  <div className="relative" ref={userMenuRef}>
+                    <button onClick={() => setUserMenuOpen(prev => !prev)} className="flex items-center gap-2 p-1 rounded-full hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <span className="text-slate-700 font-medium hidden lg:block">{user.first_name} {user.last_name}</span>
+                        <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-600">
+                            <UserIcon />
+                        </div>
+                    </button>
+                    {isUserMenuOpen && (
+                        <div className="absolute right-0 mt-2 w-56 origin-top-right bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 animate-fadeInUp" style={{animationDuration: '0.15s'}}>
+                            <div className="py-1">
+                                <div className="px-4 py-2">
+                                    <p className="text-sm font-medium text-slate-900 truncate">{user.first_name} {user.last_name}</p>
+                                    <p className="text-sm text-slate-500 truncate">{user.email}</p>
+                                </div>
+                                <div className="border-t border-slate-200"></div>
+                                <button
+                                    onClick={() => { onLogout(); setUserMenuOpen(false); }}
+                                    className="w-full text-left flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                                >
+                                    <LogoutIcon />
+                                    <span>Logout</span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
                   </div>
               </div>
           </div>
@@ -564,12 +599,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
                   <NavLink view="docs" current={currentView} setView={handleNavigate}>Docs</NavLink>
                   <NavLink view="guides" current={currentView} setView={handleNavigate}>User Guides</NavLink>
                   <NavLink view="terms" current={currentView} setView={handleNavigate}>Terms of Service</NavLink>
-                  <button 
-                    onClick={() => { onLogout(); setMobileMenuOpen(false); }} 
-                    className="w-full text-left text-sm font-medium transition-colors p-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                  >
-                    Logout
-                  </button>
               </nav>
           )}
       </header>
