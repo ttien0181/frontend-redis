@@ -28,7 +28,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
     <div>
       <div className="text-center py-16 sm:py-24 px-4">
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-slate-900 mb-4">
-          Welcome to Your Cloud Dashboard
+          Welcome to RedisGate
         </h1>
         <p className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto mb-8">
           The all-in-one solution for managing your organizations and Redis instances.

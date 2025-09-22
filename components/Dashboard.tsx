@@ -391,6 +391,21 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
     setMobileMenuOpen(false);
   };
 
+  const handleGoToOrganizationsList = () => {
+    if (currentView === 'dashboard' && (dashboardView === 'instances' || dashboardView === 'details')) {
+         setAnimation({ class: 'slide-back-enter', key: Date.now() });
+    } else if (currentView !== 'dashboard') {
+         setAnimation({ class: 'animate-fadeInUp', key: Date.now() });
+    }
+    // No animation change if already on orgs list.
+
+    setCurrentView('dashboard');
+    setDashboardView('organizations');
+    setSelectedOrg(null);
+    setSelectedInstance(null);
+    setMobileMenuOpen(false);
+  };
+
   const handleGetStarted = () => {
     setAnimation({ class: 'slide-enter', key: Date.now() });
     setDashboardView('organizations');
@@ -522,9 +537,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
       <header className="bg-white/80 backdrop-blur-sm p-4 sticky top-0 z-40 border-b border-slate-200">
           <div className="container mx-auto flex justify-between items-center">
               <div className="flex items-center gap-2 sm:gap-6">
-                <button className="flex items-center gap-3" onClick={() => handleNavigate('dashboard')}>
+                <button className="flex items-center gap-3" onClick={handleGoToOrganizationsList}>
                     <LogoIcon/>
-                    <h1 className="text-xl font-bold text-slate-900 hidden sm:block">Cloud Dashboard</h1>
+                    <h1 className="text-xl font-bold text-slate-900 hidden sm:block">RedisGate</h1>
                 </button>
                 <nav className="hidden lg:flex items-center gap-2">
                     <NavLink view="docs" current={currentView} setView={handleNavigate}>Docs</NavLink>
@@ -686,7 +701,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
 
       <footer className="bg-white border-t border-slate-200 py-6 mt-8">
           <div className="container mx-auto text-center text-slate-500 text-sm">
-              <p>&copy; {new Date().getFullYear()} Redis Cloud Dashboard. All rights reserved.</p>
+              <p>&copy; {new Date().getFullYear()} RedisGate. All rights reserved.</p>
           </div>
       </footer>
 

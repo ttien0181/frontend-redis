@@ -18,11 +18,11 @@ const UserGuidesPage: React.FC<UserGuidesPageProps> = ({ onNavigate }) => {
         <div className="bg-white p-6 sm:p-10 rounded-xl shadow-md border border-slate-200">
             <div className="mb-8 text-center">
                 <h1 className="text-4xl font-extrabold text-slate-900">User Guides</h1>
-                <p className="mt-2 text-lg text-slate-600">Your step-by-step guide to mastering the Cloud Dashboard.</p>
+                <p className="mt-2 text-lg text-slate-600">Your step-by-step guide to mastering RedisGate.</p>
             </div>
             
             <GuideSection title="1. Getting Started: Account Setup">
-                <p>Welcome to the Redis Cloud Dashboard! Your first step is to create an account to access all the features.</p>
+                <p>Welcome to RedisGate! Your first step is to create an account to access all the features.</p>
                 <ol>
                     <li><strong>Registration:</strong> Navigate to the main page. If you're not logged in, you'll see the authentication form. Click on "create an account". Fill in your first name, last name, username, email, and a secure password. Click "Register".</li>
                     <li><strong>Login:</strong> After successful registration, you'll be prompted to log in. Use the email and password you just created to sign in to your new account.</li>
