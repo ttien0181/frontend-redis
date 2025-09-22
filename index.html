@@ -15,6 +15,31 @@
   }
 }
 </script>
+<style>
+  /* Keyframes for animations */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideInFromRight {
+    from { transform: translateX(30px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  @keyframes slideInFromLeft {
+    from { transform: translateX(-30px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  /* Animation classes */
+  .animate-fadeInUp {
+    animation: fadeInUp 0.4s ease-out forwards;
+  }
+  .slide-enter {
+    animation: slideInFromRight 0.35s ease-out forwards;
+  }
+  .slide-back-enter {
+    animation: slideInFromLeft 0.35s ease-out forwards;
+  }
+</style>
 </head>
   <body class="bg-slate-100">
     <div id="root"></div>

@@ -21,10 +21,15 @@ interface ModalProps {
     children: React.ReactNode;
 }
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
-    if (!isOpen) return null;
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4" onClick={onClose}>
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 relative" onClick={e => e.stopPropagation()}>
+        <div 
+          className={`fixed inset-0 bg-black z-50 flex justify-center items-center p-4 transition-all duration-300 ease-in-out ${isOpen ? 'bg-opacity-60 opacity-100' : 'bg-opacity-0 opacity-0 pointer-events-none'}`} 
+          onClick={onClose}
+        >
+            <div 
+              className={`bg-white rounded-lg shadow-xl w-full max-w-lg p-6 relative transition-transform duration-300 ease-in-out ${isOpen ? 'scale-100' : 'scale-95'}`}
+              onClick={e => e.stopPropagation()}
+            >
                 <h3 className="text-xl font-semibold text-slate-900 mb-4">{title}</h3>
                 <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-800 text-2xl leading-none">&times;</button>
                 <div>{children}</div>
@@ -44,10 +49,15 @@ interface ConfirmationModalProps {
     isLoading?: boolean;
 }
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, onConfirm, title, message, confirmText = "Confirm", isLoading = false }) => {
-    if (!isOpen) return null;
     return (
-         <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4" onClick={onClose}>
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6 relative" onClick={e => e.stopPropagation()}>
+         <div 
+           className={`fixed inset-0 z-50 flex justify-center items-center p-4 transition-all duration-300 ease-in-out ${isOpen ? 'bg-black bg-opacity-60 opacity-100' : 'bg-opacity-0 opacity-0 pointer-events-none'}`}
+           onClick={onClose}
+         >
+            <div 
+              className={`bg-white rounded-lg shadow-xl w-full max-w-md p-6 relative transition-transform duration-300 ease-in-out ${isOpen ? 'scale-100' : 'scale-95'}`}
+              onClick={e => e.stopPropagation()}
+            >
                 <div className="flex items-start gap-4">
                     <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
                         <WarningIcon />
@@ -80,10 +90,15 @@ interface AlertModalProps {
     message: string;
 }
 const AlertModal: React.FC<AlertModalProps> = ({ isOpen, onClose, title, message }) => {
-    if (!isOpen) return null;
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4" onClick={onClose}>
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6 relative" onClick={e => e.stopPropagation()}>
+        <div 
+          className={`fixed inset-0 z-50 flex justify-center items-center p-4 transition-all duration-300 ease-in-out ${isOpen ? 'bg-black bg-opacity-60 opacity-100' : 'bg-opacity-0 opacity-0 pointer-events-none'}`}
+          onClick={onClose}
+        >
+            <div 
+              className={`bg-white rounded-lg shadow-xl w-full max-w-md p-6 relative transition-transform duration-300 ease-in-out ${isOpen ? 'scale-100' : 'scale-95'}`}
+              onClick={e => e.stopPropagation()}
+            >
                 <div className="flex items-start gap-4">
                     <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
                         <WarningIcon />
@@ -166,7 +181,7 @@ const InstanceDetailsView: React.FC<{ selectedOrg: Organization; selectedInstanc
     };
 
     return (
-        <div className="animate-fade-in">
+        <div>
              <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-4">
                     <button onClick={onBack} className="flex items-center gap-2 p-2 rounded-md hover:bg-slate-200 text-slate-500 hover:text-slate-900">
@@ -222,6 +237,7 @@ const InstanceDetailsView: React.FC<{ selectedOrg: Organization; selectedInstanc
 
 const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
   type View = 'dashboard' | 'docs' | 'guides' | 'terms';
+  type DashboardView = 'landing' | 'organizations' | 'instances' | 'details';
   
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
@@ -231,7 +247,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
 
   // View management state
   const [currentView, setCurrentView] = useState<View>('dashboard');
-  const [showLandingPage, setShowLandingPage] = useState(true);
+  const [dashboardView, setDashboardView] = useState<DashboardView>('landing');
+  const [animation, setAnimation] = useState({ class: 'animate-fadeInUp', key: Date.now() });
+
   const [selectedInstance, setSelectedInstance] = useState<RedisInstance | null>(null);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -259,9 +277,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
     try {
       const data = await getOrganizations(token);
       setOrganizations(data.items);
+      if (data.items.length > 0 && dashboardView === 'landing') {
+          setDashboardView('organizations');
+      }
     } catch (err) { setError(err instanceof Error ? err.message : 'Failed to fetch organizations'); } 
     finally { setLoading(''); }
-  }, [token]);
+  }, [token, dashboardView]);
 
   useEffect(() => { 
       if(currentView === 'dashboard') {
@@ -288,8 +309,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
 
   // Polling for Redis instance status updates
   useEffect(() => {
-    if (!selectedOrg || !!selectedInstance || currentView !== 'dashboard') {
-      return; // Stop polling if no org is selected or if we are in instance detail view or not on dashboard
+    if (!selectedOrg || dashboardView !== 'instances' || currentView !== 'dashboard') {
+      return; // Stop polling
     }
 
     const intervalId = setInterval(async () => {
@@ -302,14 +323,41 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
     }, 5000); // Poll every 5 seconds
 
     return () => clearInterval(intervalId); // Cleanup interval on component unmount or when dependencies change
-  }, [selectedOrg, selectedInstance, token, currentView]);
+  }, [selectedOrg, dashboardView, token, currentView]);
 
+  // --- Navigation Handlers ---
   const handleNavigate = (view: View) => {
     setCurrentView(view);
-    setSelectedOrg(null);
-    setSelectedInstance(null);
-    setShowLandingPage(true); // Reset to landing for dashboard view
-  }
+    setMobileMenuOpen(false);
+  };
+
+  const handleGetStarted = () => {
+    setAnimation({ class: 'slide-enter', key: Date.now() });
+    setDashboardView('organizations');
+  };
+
+  const handleSelectOrg = (org: Organization) => {
+      setSelectedOrg(org);
+      setAnimation({ class: 'slide-enter', key: Date.now() });
+      setDashboardView('instances');
+  };
+
+  const handleSelectInstance = (inst: RedisInstance) => {
+      setSelectedInstance(inst);
+      setAnimation({ class: 'slide-enter', key: Date.now() });
+      setDashboardView('details');
+  };
+
+  const handleBack = () => {
+      setAnimation({ class: 'slide-back-enter', key: Date.now() });
+      if (dashboardView === 'details') {
+          setSelectedInstance(null);
+          setDashboardView('instances');
+      } else if (dashboardView === 'instances') {
+          setSelectedOrg(null);
+          setDashboardView('organizations');
+      }
+  };
 
   // --- ORG HANDLERS ---
   const handleCreateOrg = async (e: React.FormEvent) => {
@@ -345,7 +393,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
         await deleteOrganization(token, orgToDelete.id);
         setOrgToDelete(null);
         fetchOrgs();
-        setSelectedOrg(null); // Deselect if it was the selected one
+        if (selectedOrg?.id === orgToDelete.id) {
+            handleBack(); // Go back if we deleted the selected org
+        }
     } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to delete organization';
         if (errorMessage.includes('active Redis instances')) {
@@ -436,10 +486,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
               </div>
           </div>
           {isMobileMenuOpen && (
-              <nav className="lg:hidden mt-4 container mx-auto flex flex-col items-start gap-2 animate-fade-in-down">
-                  <NavLink view="docs" current={currentView} setView={(v) => { handleNavigate(v); setMobileMenuOpen(false); }}>Docs</NavLink>
-                  <NavLink view="guides" current={currentView} setView={(v) => { handleNavigate(v); setMobileMenuOpen(false); }}>User Guides</NavLink>
-                  <NavLink view="terms" current={currentView} setView={(v) => { handleNavigate(v); setMobileMenuOpen(false); }}>Terms of Service</NavLink>
+              <nav className="lg:hidden mt-4 container mx-auto flex flex-col items-start gap-2 animate-fadeInUp">
+                  <NavLink view="docs" current={currentView} setView={handleNavigate}>Docs</NavLink>
+                  <NavLink view="guides" current={currentView} setView={handleNavigate}>User Guides</NavLink>
+                  <NavLink view="terms" current={currentView} setView={handleNavigate}>Terms of Service</NavLink>
               </nav>
           )}
       </header>
@@ -463,7 +513,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
                             <button onClick={(e) => { e.stopPropagation(); setOrgToEdit(org); setEditOrgModalOpen(true); }} className="p-2 rounded-full bg-slate-100 hover:bg-indigo-500 text-slate-500 hover:text-white"><EditIcon /></button>
                             <button onClick={(e) => { e.stopPropagation(); setOrgToDelete(org); }} className="p-2 rounded-full bg-slate-100 hover:bg-red-500 text-slate-500 hover:text-white"><DeleteIcon /></button>
                         </div>
-                        <div onClick={() => { setSelectedOrg(org); setShowLandingPage(false); }} className="cursor-pointer">
+                        <div onClick={() => handleSelectOrg(org)} className="cursor-pointer">
                             <div className="flex items-center gap-4 mb-3">
                                 <div className="p-2 bg-slate-100 rounded-lg"><BuildingOfficeIcon /></div>
                                 <h3 className="text-xl font-semibold text-slate-800">{org.name}</h3>
@@ -482,7 +532,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
       <div>
           <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-4">
-                  <button onClick={() => { setSelectedOrg(null); setSelectedInstance(null); }} className="flex items-center gap-2 p-2 rounded-md hover:bg-slate-200 text-slate-500 hover:text-slate-900">
+                  <button onClick={handleBack} className="flex items-center gap-2 p-2 rounded-md hover:bg-slate-200 text-slate-500 hover:text-slate-900">
                       <ArrowLeftIcon />
                   </button>
                   <h2 className="text-xl md:text-3xl font-bold text-slate-900 truncate">{selectedOrg?.name} / Instances</h2>
@@ -509,7 +559,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
                         </thead>
                         <tbody>
                             {redisInstances.map(inst => (
-                                <tr key={inst.id} className="border-t border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setSelectedInstance(inst)}>
+                                <tr key={inst.id} className="border-t border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => handleSelectInstance(inst)}>
                                     <td className="p-4 flex items-center gap-3 text-slate-700"><DatabaseIcon /> {inst.name}</td>
                                     <td className="p-4"><StatusBadge status={inst.status} /></td>
                                     <td className="p-4 font-mono text-sm text-slate-500 truncate max-w-xs">{inst.domain}</td>
@@ -527,41 +577,46 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
   );
 
   const renderDashboardContent = () => {
-    if (showLandingPage) {
-        return <LandingPage onGetStarted={() => setShowLandingPage(false)} />;
+    switch (dashboardView) {
+        case 'landing':
+            return <LandingPage onGetStarted={handleGetStarted} />;
+        case 'organizations':
+            return renderOrganizations();
+        case 'instances':
+            if (selectedOrg) return renderRedisInstances();
+            // Fallback if selectedOrg is missing
+            return renderOrganizations();
+        case 'details':
+            if (selectedOrg && selectedInstance) {
+                return <InstanceDetailsView 
+                        selectedInstance={selectedInstance}
+                        selectedOrg={selectedOrg}
+                        onBack={handleBack}
+                      />;
+            }
+            // Fallback
+            return renderRedisInstances();
+        default:
+             return <LandingPage onGetStarted={handleGetStarted} />;
     }
-    if (selectedInstance && selectedOrg) {
-        return <InstanceDetailsView 
-                selectedInstance={selectedInstance}
-                selectedOrg={selectedOrg}
-                onBack={() => setSelectedInstance(null)}
-              />;
-    }
-    if (selectedOrg) {
-        return renderRedisInstances();
-    }
-    return renderOrganizations();
   }
   
   const formFieldClasses = "w-full p-2 bg-slate-100 border border-slate-300 rounded-md text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition";
   
   return (
     <div className="flex flex-col min-h-screen">
-      <style>{`
-        @keyframes fadeInDown {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in-down {
-          animation: fadeInDown 0.3s ease-out forwards;
-        }
-      `}</style>
       {renderHeader()}
       <main className="flex-grow container mx-auto p-4 md:p-8">
-        {currentView === 'dashboard' && renderDashboardContent()}
-        {currentView === 'docs' && <DocsPage />}
-        {currentView === 'guides' && <UserGuidesPage onNavigate={handleNavigate} />}
-        {currentView === 'terms' && <TermsOfServicePage />}
+        <div key={currentView} className="animate-fadeInUp">
+            {currentView === 'dashboard' && (
+                <div key={animation.key} className={animation.class}>
+                   {renderDashboardContent()}
+                </div>
+            )}
+            {currentView === 'docs' && <DocsPage />}
+            {currentView === 'guides' && <UserGuidesPage onNavigate={handleNavigate} />}
+            {currentView === 'terms' && <TermsOfServicePage />}
+        </div>
       </main>
 
       <footer className="bg-white border-t border-slate-200 py-6 mt-8">

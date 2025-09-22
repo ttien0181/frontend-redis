@@ -15,7 +15,7 @@ interface UserGuidesPageProps {
 
 const UserGuidesPage: React.FC<UserGuidesPageProps> = ({ onNavigate }) => {
     return (
-        <div className="animate-fade-in bg-white p-6 sm:p-10 rounded-xl shadow-md border border-slate-200">
+        <div className="bg-white p-6 sm:p-10 rounded-xl shadow-md border border-slate-200">
             <div className="mb-8 text-center">
                 <h1 className="text-4xl font-extrabold text-slate-900">User Guides</h1>
                 <p className="mt-2 text-lg text-slate-600">Your step-by-step guide to mastering the Cloud Dashboard.</p>

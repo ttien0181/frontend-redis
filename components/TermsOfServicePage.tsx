@@ -12,7 +12,7 @@ const TermSection: React.FC<{ title: string; children: React.ReactNode }> = ({ t
 
 const TermsOfServicePage: React.FC = () => {
     return (
-        <div className="animate-fade-in bg-white p-6 sm:p-10 rounded-xl shadow-md border border-slate-200">
+        <div className="bg-white p-6 sm:p-10 rounded-xl shadow-md border border-slate-200">
              <div className="mb-8 text-center">
                 <h1 className="text-4xl font-extrabold text-slate-900">Terms of Service</h1>
                 <p className="mt-2 text-lg text-slate-600">Last Updated: {new Date().toLocaleDateString()}</p>

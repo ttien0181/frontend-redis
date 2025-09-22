@@ -25,7 +25,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
   ];
 
   return (
-    <div className="animate-fade-in">
+    <div>
       <div className="text-center py-16 sm:py-24 px-4">
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-slate-900 mb-4">
           Welcome to Your Cloud Dashboard
@@ -60,15 +60,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
           </div>
         </div>
       </div>
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-          animation: fadeIn 0.5s ease-out forwards;
-        }
-      `}</style>
     </div>
   );
 };

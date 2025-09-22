@@ -73,7 +73,7 @@ const DocsPage: React.FC = () => {
     ];
 
     return (
-        <div className="animate-fade-in">
+        <div>
             <div className="mb-8">
                 <h1 className="text-4xl font-extrabold text-slate-900">API Documentation</h1>
                 <p className="mt-2 text-lg text-slate-600">Detailed information about our API endpoints.</p>
