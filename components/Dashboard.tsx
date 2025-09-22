@@ -122,6 +122,8 @@ const AlertModal: React.FC<AlertModalProps> = ({ isOpen, onClose, title, message
 
 const InstanceDetailsView: React.FC<{ selectedOrg: Organization; selectedInstance: RedisInstance; onBack: () => void; }> = ({ selectedOrg, selectedInstance, onBack }) => {
     const [copiedText, setCopiedText] = useState('');
+    const [expandedEndpoint, setExpandedEndpoint] = useState<string | null>(null);
+    const [paramValues, setParamValues] = useState<{ [key: string]: string }>({});
 
     const handleCopy = (text: string) => {
         navigator.clipboard.writeText(text).then(() => {
@@ -132,14 +134,21 @@ const InstanceDetailsView: React.FC<{ selectedOrg: Organization; selectedInstanc
     
     const BASE_API_URL = 'http://localhost:8080';
 
-    const MethodBadge: React.FC<{ method: string }> = ({ method }) => {
-        const colors: { [key: string]: string } = {
-            'GET': 'bg-sky-100 text-sky-800', 'POST': 'bg-green-100 text-green-800',
-            'PUT': 'bg-yellow-100 text-yellow-800', 'DELETE': 'bg-red-100 text-red-800', 
-            'ANY': 'bg-purple-100 text-purple-800'
-        };
-        return <span className={`font-mono text-xs font-bold mr-2 px-2 py-1 rounded-md ${colors[method] || 'bg-slate-100 text-slate-800'}`}>{method}</span>
-    }
+    const getParamsFromPath = (path: string): string[] => {
+        const colonParams = (path.match(/:(\w+)/g) || [])
+            .map(match => match.substring(1))
+            .filter(param => !['instance_id', 'org_id', 'key_id'].includes(param));
+    
+        const starParams = path.includes('/*path') ? ['...path'] : [];
+    
+        return [...colonParams, ...starParams];
+    };
+    
+    const ChevronDownIcon = () => (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+      </svg>
+    );
 
     const allEndpoints = [
         {
@@ -167,19 +176,6 @@ const InstanceDetailsView: React.FC<{ selectedOrg: Organization; selectedInstanc
         },
     ];
 
-    const getEndpointUrl = (path: string) => {
-        let url = path
-            .replace(':org_id', selectedOrg.id)
-            .replace(':instance_id', selectedInstance.id)
-            .replace(':key_id', '{key_id}')
-            .replace('/:key', '/{key}')
-            .replace('/:value', '/{value}')
-            .replace(':field', '{field}')
-            .replace('/*path', '/{...path}');
-
-        return `${BASE_API_URL}${url}`;
-    };
-
     return (
         <div>
              <div className="flex justify-between items-center mb-6">
@@ -196,38 +192,102 @@ const InstanceDetailsView: React.FC<{ selectedOrg: Organization; selectedInstanc
             {allEndpoints.map(category => (
                 <div key={category.category} className="mb-8">
                     <h3 className="text-2xl font-bold text-slate-800 mb-2">{category.category}</h3>
-                    <p className="text-slate-500 mb-4 border-b pb-3">{category.description}</p>
-                    <div className="bg-white border border-slate-200 rounded-xl shadow-md overflow-hidden">
-                        <div className="overflow-x-auto">
-                             <table className="w-full text-left">
-                                <thead className="bg-slate-50">
-                                    <tr>
-                                        <th className="p-4 font-semibold text-slate-600">Endpoint</th>
-                                        <th className="p-4 font-semibold text-slate-600">Description</th>
-                                        <th className="p-4 font-semibold text-slate-600"></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {category.endpoints.map(ep => {
-                                        const fullUrl = getEndpointUrl(ep.path);
-                                        return (
-                                            <tr key={ep.path} className="border-t border-slate-200">
-                                                <td className="p-4">
-                                                    <MethodBadge method={ep.method} />
-                                                    <span className="font-mono text-sm text-slate-700 break-all">{fullUrl}</span>
-                                                </td>
-                                                <td className="p-4 text-slate-600">{ep.description}</td>
-                                                <td className="p-4 text-right">
-                                                    <button onClick={() => handleCopy(fullUrl)} className="flex items-center gap-1.5 text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-md transition-colors">
-                                                        {copiedText === fullUrl ? <><CheckIcon /> Copied</> : <><CopyIcon /> Copy</>}
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        )
-                                    })}
-                                </tbody>
-                             </table>
-                        </div>
+                    <p className="text-slate-500 mb-4 border-b border-slate-200 pb-3">{category.description}</p>
+                     <div className="space-y-2">
+                        {category.endpoints.map(ep => {
+                            const params = getParamsFromPath(ep.path);
+                            const isExpandable = params.length > 0;
+                            const isExpanded = expandedEndpoint === ep.path;
+                            
+                            const displayPath = ep.path
+                                .replace(':instance_id', selectedInstance.id)
+                                .replace(/:(\w+)/g, `{\$1}`)
+                                .replace('/*path', '/{...path}');
+
+                            const finalUrl = `${BASE_API_URL}${displayPath}`;
+                            
+                            const urlToCopy = Object.entries(paramValues).reduce(
+                                (url, [key, value]) => url.replace(`{${key}}`, encodeURIComponent(value || `{${key}}`)),
+                                finalUrl
+                            );
+
+                            const handleToggleExpand = () => {
+                                if (isExpandable) {
+                                    if (isExpanded) {
+                                        setExpandedEndpoint(null);
+                                    } else {
+                                        setExpandedEndpoint(ep.path);
+                                        const initialParams = params.reduce((acc, param) => ({...acc, [param]: ''}), {});
+                                        setParamValues(initialParams);
+                                    }
+                                }
+                            };
+
+                            const methodColors: { [key: string]: { bg: string, border: string, text: string, hoverBg: string } } = {
+                                'GET':    { bg: 'bg-sky-50',    border: 'border-sky-300',    text: 'text-sky-800',    hoverBg: 'hover:bg-sky-100' },
+                                'POST':   { bg: 'bg-green-50',  border: 'border-green-300',  text: 'text-green-800',  hoverBg: 'hover:bg-green-100' },
+                                'PUT':    { bg: 'bg-yellow-50', border: 'border-yellow-300', text: 'text-yellow-800', hoverBg: 'hover:bg-yellow-100' },
+                                'DELETE': { bg: 'bg-red-50',    border: 'border-red-300',    text: 'text-red-800',    hoverBg: 'hover:bg-red-100' },
+                                'ANY':    { bg: 'bg-purple-50', border: 'border-purple-300', text: 'text-purple-800', hoverBg: 'hover:bg-purple-100' }
+                            };
+                            const color = methodColors[ep.method] || { bg: 'bg-slate-50', border: 'border-slate-300', text: 'text-slate-800', hoverBg: 'hover:bg-slate-100' };
+
+                            return (
+                                <div key={ep.path} className={`border ${isExpanded ? color.border : 'border-slate-200'} rounded-lg overflow-hidden transition-all duration-300 ${isExpanded ? 'shadow-lg' : 'shadow-sm'}`}>
+                                    <div
+                                        onClick={handleToggleExpand}
+                                        className={`flex items-center justify-between p-3 ${isExpandable ? 'cursor-pointer' : ''} ${color.bg} ${isExpandable ? color.hoverBg : ''} transition-colors`}
+                                    >
+                                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                                            <span className={`font-mono text-sm font-bold w-[70px] text-center flex-shrink-0 ${color.text}`}>{ep.method}</span>
+                                            <span className="font-mono text-sm text-slate-700 break-words min-w-0">{displayPath}</span>
+                                        </div>
+                                        <div className="flex items-center gap-4 ml-4">
+                                            <p className="text-sm text-slate-600 hidden md:block flex-shrink-0">{ep.description}</p>
+                                            {!isExpandable && (
+                                                <button onClick={(e) => { e.stopPropagation(); handleCopy(finalUrl); }} className="flex items-center gap-1.5 text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-md transition-colors">
+                                                    {copiedText === finalUrl ? <><CheckIcon /> Copied</> : <><CopyIcon /> Copy</>}
+                                                </button>
+                                            )}
+                                            {isExpandable && (
+                                                <div className={`transform transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
+                                                  <ChevronDownIcon />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {isExpanded && (
+                                        <div className="p-4 bg-white animate-fadeInUp" style={{animationDuration: '0.3s'}}>
+                                            <h4 className="font-semibold text-slate-800 text-md mb-3">Parameters</h4>
+                                            <div className="space-y-3">
+                                                {params.map(param => (
+                                                    <div key={param} className="grid grid-cols-[120px_1fr] items-center gap-3">
+                                                        <label htmlFor={param} className="font-mono text-sm text-slate-600 text-right font-medium">
+                                                            {param}
+                                                            <span className="text-red-500 ml-1">*</span>
+                                                        </label>
+                                                        <input
+                                                            id={param}
+                                                            type="text"
+                                                            placeholder={`string`}
+                                                            value={paramValues[param] || ''}
+                                                            onChange={(e) => setParamValues(prev => ({ ...prev, [param]: e.target.value }))}
+                                                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-md text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="border-t mt-4 pt-4 flex justify-end">
+                                                <button onClick={() => handleCopy(urlToCopy)} className="flex items-center gap-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-md transition-colors shadow-sm">
+                                                    {copiedText === urlToCopy ? <><CheckIcon /> Copied</> : <><CopyIcon /> Copy URL</>}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             ))}
