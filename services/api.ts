@@ -4,7 +4,10 @@ import {
   Organization, 
   PaginatedResponse, 
   RedisInstance, 
-  User 
+  User,
+  ApiKey,
+  HealthStatus,
+  SystemStats
 } from '../types';
 
 const BASE_URL = 'http://localhost:8080';
@@ -87,6 +90,13 @@ export const getRedisInstances = async (token: string, orgId: string) => {
   return response.data;
 };
 
+export const getApiKeys = async (token: string, orgId: string) => {
+  const response = await request<{ items: ApiKey[] }>(`/api/organizations/${orgId}/api-keys`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  return response.data;
+};
+
 export const createRedisInstance = async (token: string, orgId: string, instanceData: any) => {
   const response = await request<RedisInstance>(`/api/organizations/${orgId}/redis-instances`, {
     method: 'POST',
@@ -102,4 +112,24 @@ export const deleteRedisInstance = async (token: string, orgId: string, instance
         headers: { 'Authorization': `Bearer ${token}` }
     });
     return response;
+};
+
+export const getSystemHealth = async (): Promise<HealthStatus> => {
+  const url = `${BASE_URL}/health`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Health check failed! status: ${response.status}`);
+  }
+  const result: HealthStatus = await response.json();
+  return result;
+};
+
+export const getSystemStats = async (): Promise<SystemStats> => {
+  const url = `${BASE_URL}/stats`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Stats fetch failed! status: ${response.status}`);
+  }
+  const result: SystemStats = await response.json();
+  return result;
 };

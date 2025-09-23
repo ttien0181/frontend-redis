@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { login, register } from '../services/api';
 import { User, AuthData } from '../types';
-import { LogoIcon } from './ui/Icons';
+import { ArrowLeftIcon, LogoIcon } from './ui/Icons';
 
 interface AuthPageProps {
   onLoginSuccess: (token: string, user: User) => void;
+  onBack: () => void;
 }
 
-const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
+const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onBack }) => {
   const [isLoginView, setIsLoginView] = useState(true);
   const [formData, setFormData] = useState({
     email: '',
@@ -85,8 +86,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-100 p-4">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl shadow-xl">
-        <div className="flex justify-center mb-4">
+      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl shadow-xl relative">
+        <button onClick={onBack} className="absolute top-4 left-4 p-2 rounded-full hover:bg-slate-100 transition-colors" aria-label="Back to welcome page">
+          <ArrowLeftIcon />
+        </button>
+        <div className="flex justify-center mb-4 pt-8">
             <LogoIcon />
         </div>
         <div className="text-center">
@@ -100,7 +104,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
                 setIsLoginView(!isLoginView);
                 setError(null);
               }}
-              className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors"
+              className="font-medium text-teal-600 hover:text-teal-500 transition-colors"
             >
               {isLoginView ? 'create an account' : 'sign in'}
             </button>
@@ -126,7 +130,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
           </div>
 
           <div>
-            <button type="submit" disabled={loading} className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 focus:ring-offset-white disabled:bg-indigo-500/50 transition-all duration-300">
+            <button type="submit" disabled={loading} className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 focus:ring-offset-white disabled:bg-teal-500/50 transition-all duration-300">
               <span className="absolute left-0 inset-y-0 flex items-center pl-3">
               </span>
               {loading ? 'Processing...' : (isLoginView ? 'Sign In' : 'Register')}
@@ -150,8 +154,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
         }
         .input-field:focus {
             z-index: 10;
-            border-color: #6366f1;
-            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.4);
+            border-color: #0d9488; /* teal-600 */
+            box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.4); /* teal-500 with opacity */
         }
       `}</style>
     </div>

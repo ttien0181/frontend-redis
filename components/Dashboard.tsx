@@ -1,16 +1,27 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Organization, RedisInstance, User } from '../types';
-import { getOrganizations, getRedisInstances, createOrganization, createRedisInstance, updateOrganization, deleteOrganization, deleteRedisInstance } from '../services/api';
-import { BuildingOfficeIcon, DatabaseIcon, PlusIcon, LogoutIcon, ArrowLeftIcon, SpinnerIcon, EditIcon, DeleteIcon, LogoIcon, WarningIcon, CopyIcon, CheckIcon, HamburgerIcon, CloseIcon, UserIcon } from './ui/Icons';
-import LandingPage from './LandingPage';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { Organization, RedisInstance, User, SystemStats } from '../types';
+import { getOrganizations, getRedisInstances, createOrganization, createRedisInstance, updateOrganization, deleteOrganization, deleteRedisInstance, getApiKeys, getSystemHealth, getSystemStats } from '../services/api';
+import { BuildingOfficeIcon, DatabaseIcon, PlusIcon, LogoutIcon, ArrowLeftIcon, SpinnerIcon, EditIcon, DeleteIcon, LogoIcon, WarningIcon, CopyIcon, CheckIcon, UserIcon, DashboardIcon, ApiKeyIcon, SettingsIcon, BellIcon, SearchIcon, SystemStatusIcon, LifeBuoyIcon, FileTextIcon, BookOpenIcon, ChevronDownIcon } from './ui/Icons';
 import DocsPage from './DocsPage';
 import UserGuidesPage from './UserGuidesPage';
+// FIX: Import TermsOfServicePage to handle rendering for the 'terms' view.
 import TermsOfServicePage from './TermsOfServicePage';
 
 interface DashboardProps {
   user: User;
   token: string;
   onLogout: () => void;
+}
+
+interface Notification {
+  id: number;
+  message: string;
+  type: 'success' | 'error';
+  read: boolean;
+  context?: {
+    orgId?: string;
+    instanceId?: string;
+  };
 }
 
 // Reusable Modal Component
@@ -111,7 +122,7 @@ const AlertModal: React.FC<AlertModalProps> = ({ isOpen, onClose, title, message
                     </div>
                 </div>
                 <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
-                    <button type="button" onClick={onClose} className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none sm:w-auto sm:text-sm">
+                    <button type="button" onClick={onClose} className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-teal-600 text-base font-medium text-white hover:bg-teal-700 focus:outline-none sm:w-auto sm:text-sm">
                         OK
                     </button>
                 </div>
@@ -144,12 +155,6 @@ const InstanceDetailsView: React.FC<{ selectedOrg: Organization; selectedInstanc
         return [...colonParams, ...starParams];
     };
     
-    const ChevronDownIcon = () => (
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-      </svg>
-    );
-
     const allEndpoints = [
         {
             category: 'Redis HTTP API',
@@ -273,13 +278,13 @@ const InstanceDetailsView: React.FC<{ selectedOrg: Organization; selectedInstanc
                                                             placeholder={`string`}
                                                             value={paramValues[param] || ''}
                                                             onChange={(e) => setParamValues(prev => ({ ...prev, [param]: e.target.value }))}
-                                                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-md text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                                                            className="w-full p-2 bg-slate-50 border border-slate-300 rounded-md text-slate-900 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition"
                                                         />
                                                     </div>
                                                 ))}
                                             </div>
                                             <div className="border-t mt-4 pt-4 flex justify-end">
-                                                <button onClick={() => handleCopy(urlToCopy)} className="flex items-center gap-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-md transition-colors shadow-sm">
+                                                <button onClick={() => handleCopy(urlToCopy)} className="flex items-center gap-1.5 text-sm bg-teal-600 hover:bg-teal-700 text-white font-semibold px-4 py-2 rounded-md transition-colors shadow-sm">
                                                     {copiedText === urlToCopy ? <><CheckIcon /> Copied</> : <><CopyIcon /> Copy URL</>}
                                                 </button>
                                             </div>
@@ -296,24 +301,30 @@ const InstanceDetailsView: React.FC<{ selectedOrg: Organization; selectedInstanc
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
+  // FIX: Added 'terms' to the View type to match the props of UserGuidesPage, resolving a TypeScript error.
   type View = 'dashboard' | 'docs' | 'guides' | 'terms';
-  type DashboardView = 'landing' | 'organizations' | 'instances' | 'details';
+  type DashboardSubView = 'overview' | 'org-management' | 'details';
   
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [stats, setStats] = useState<SystemStats['tables'] | null>(null);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [redisInstances, setRedisInstances] = useState<RedisInstance[]>([]);
+  const [apiKeyCount, setApiKeyCount] = useState(0);
   const [loading, setLoading] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   // View management state
   const [currentView, setCurrentView] = useState<View>('dashboard');
-  const [dashboardView, setDashboardView] = useState<DashboardView>('landing');
+  const [dashboardView, setDashboardView] = useState<DashboardSubView>('overview');
   const [animation, setAnimation] = useState({ class: 'animate-fadeInUp', key: Date.now() });
+  const [searchTerm, setSearchTerm] = useState('');
 
   const [selectedInstance, setSelectedInstance] = useState<RedisInstance | null>(null);
-  const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setUserMenuOpen] = useState(false);
+  const [isNotificationMenuOpen, setNotificationMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const notificationMenuRef = useRef<HTMLDivElement>(null);
+
 
   // Modals state
   const [isCreateOrgModalOpen, setCreateOrgModalOpen] = useState(false);
@@ -329,105 +340,165 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
   const [newRedisData, setNewRedisData] = useState({
     name: '', slug: '', max_memory: 104857600, redis_version: '7.2', persistence_enabled: true, backup_enabled: false,
   });
+  
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [popupNotification, setPopupNotification] = useState<Notification | null>(null);
+  const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [systemStatus, setSystemStatus] = useState<'healthy' | 'unhealthy' | 'checking'>('checking');
+
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const health = await getSystemHealth();
+        if (health.status === 'ok' && health.database === 'healthy') {
+          setSystemStatus('healthy');
+        } else {
+          setSystemStatus('unhealthy');
+        }
+      } catch (error) {
+        console.error("Health check failed:", error);
+        setSystemStatus('unhealthy');
+      }
+    };
+
+    checkHealth(); // Initial check
+    const intervalId = setInterval(checkHealth, 30000); // Check every 30 seconds
+
+    return () => clearInterval(intervalId); // Cleanup
+  }, []);
+
+  useEffect(() => {
+    if (popupNotification) {
+      if (popupTimerRef.current) {
+        clearTimeout(popupTimerRef.current);
+      }
+      popupTimerRef.current = setTimeout(() => {
+        setPopupNotification(null);
+      }, 5000);
+    }
+    return () => {
+      if (popupTimerRef.current) {
+        clearTimeout(popupTimerRef.current);
+      }
+    };
+  }, [popupNotification]);
+
+  const addNotification = (message: string, type: 'success' | 'error' = 'success', context?: Notification['context']) => {
+    const newNotification: Notification = {
+        id: Date.now(),
+        message,
+        type,
+        read: false,
+        context,
+    };
+    setNotifications(prev => [newNotification, ...prev].slice(0, 10)); // Keep last 10
+    setPopupNotification(newNotification);
+  };
+  
+  const handleNotificationClick = (notification: Notification) => {
+    if (!notification.context || notification.type === 'error') return;
+
+    setNotificationMenuOpen(false); // Close menu on click
+
+    const { orgId } = notification.context;
+
+    if (orgId) {
+        const targetOrg = organizations.find(o => o.id === orgId);
+        if (targetOrg) {
+            handleSelectOrg(targetOrg);
+        } else {
+            fetchDashboardData().then(() => {
+                const fetchedOrg = organizations.find(o => o.id === orgId);
+                if (fetchedOrg) handleSelectOrg(fetchedOrg);
+            });
+        }
+    }
+  };
 
   const generateSlug = (name: string) => name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
-  const fetchOrgs = useCallback(async () => {
-    setLoading('orgs');
+  const fetchDashboardData = useCallback(async () => {
+    setLoading('dashboard-data');
     setError(null);
     try {
-      const data = await getOrganizations(token);
-      setOrganizations(data.items);
-      if (data.items.length > 0 && dashboardView === 'landing') {
-          setDashboardView('organizations');
-      }
-    } catch (err) { setError(err instanceof Error ? err.message : 'Failed to fetch organizations'); } 
-    finally { setLoading(''); }
-  }, [token, dashboardView]);
+        const [orgsData, statsData] = await Promise.all([
+            getOrganizations(token),
+            getSystemStats()
+        ]);
+        setOrganizations(orgsData.items);
+        setStats(statsData.tables);
+    } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch dashboard data');
+    } finally {
+        setLoading('');
+    }
+  }, [token]);
 
   useEffect(() => { 
-      if(currentView === 'dashboard') {
-          fetchOrgs(); 
+      if(currentView === 'dashboard' && dashboardView === 'overview') {
+          fetchDashboardData(); 
       }
-  }, [fetchOrgs, currentView]);
+  }, [fetchDashboardData, currentView, dashboardView]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
         if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
             setUserMenuOpen(false);
         }
+        if (notificationMenuRef.current && !notificationMenuRef.current.contains(event.target as Node)) {
+            setNotificationMenuOpen(false);
+        }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
         document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [userMenuRef]);
+  }, [userMenuRef, notificationMenuRef]);
+  
+  useEffect(() => {
+    setSearchTerm('');
+  }, [dashboardView]);
 
   const fetchRedisInstances = useCallback(async (orgId: string) => {
-    setLoading('redis');
-    setError(null);
-    try {
-        const data = await getRedisInstances(token, orgId);
-        setRedisInstances(data.items);
-    } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch Redis instances');
-        setRedisInstances([]);
-    } finally { setLoading(''); }
+    const data = await getRedisInstances(token, orgId);
+    setRedisInstances(data.items);
+  }, [token]);
+
+  const fetchApiKeys = useCallback(async (orgId: string) => {
+    const data = await getApiKeys(token, orgId);
+    setApiKeyCount(data.items.length);
   }, [token]);
   
-  // Initial fetch when an org is selected
   useEffect(() => {
-      if (selectedOrg) { fetchRedisInstances(selectedOrg.id); }
-  }, [selectedOrg, fetchRedisInstances]);
+      if (selectedOrg) { 
+        setLoading('org-data');
+        setError(null);
+        Promise.all([fetchRedisInstances(selectedOrg.id), fetchApiKeys(selectedOrg.id)])
+            .catch(err => setError(err instanceof Error ? err.message : 'Failed to fetch organization data'))
+            .finally(() => setLoading(''));
+      }
+  }, [selectedOrg, fetchRedisInstances, fetchApiKeys]);
 
-  // Polling for Redis instance status updates
   useEffect(() => {
-    if (!selectedOrg || dashboardView !== 'instances' || currentView !== 'dashboard') {
-      return; // Stop polling
+    if (!selectedOrg || dashboardView !== 'org-management' || currentView !== 'dashboard') {
+      return;
     }
 
     const intervalId = setInterval(async () => {
       try {
         const data = await getRedisInstances(token, selectedOrg.id);
         setRedisInstances(data.items);
-      } catch (err) {
-        console.error("Polling error:", err);
-      }
-    }, 5000); // Poll every 5 seconds
+      } catch (err) { console.error("Polling error:", err); }
+    }, 5000);
 
-    return () => clearInterval(intervalId); // Cleanup interval on component unmount or when dependencies change
+    return () => clearInterval(intervalId);
   }, [selectedOrg, dashboardView, token, currentView]);
-
-  // --- Navigation Handlers ---
-  const handleNavigate = (view: View) => {
-    setCurrentView(view);
-    setMobileMenuOpen(false);
-  };
-
-  const handleGoToOrganizationsList = () => {
-    if (currentView === 'dashboard' && (dashboardView === 'instances' || dashboardView === 'details')) {
-         setAnimation({ class: 'slide-back-enter', key: Date.now() });
-    } else if (currentView !== 'dashboard') {
-         setAnimation({ class: 'animate-fadeInUp', key: Date.now() });
-    }
-    // No animation change if already on orgs list.
-
-    setCurrentView('dashboard');
-    setDashboardView('organizations');
-    setSelectedOrg(null);
-    setSelectedInstance(null);
-    setMobileMenuOpen(false);
-  };
-
-  const handleGetStarted = () => {
-    setAnimation({ class: 'slide-enter', key: Date.now() });
-    setDashboardView('organizations');
-  };
 
   const handleSelectOrg = (org: Organization) => {
       setSelectedOrg(org);
       setAnimation({ class: 'slide-enter', key: Date.now() });
-      setDashboardView('instances');
+      setDashboardView('org-management');
   };
 
   const handleSelectInstance = (inst: RedisInstance) => {
@@ -440,23 +511,29 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
       setAnimation({ class: 'slide-back-enter', key: Date.now() });
       if (dashboardView === 'details') {
           setSelectedInstance(null);
-          setDashboardView('instances');
-      } else if (dashboardView === 'instances') {
+          setDashboardView('org-management');
+      } else if (dashboardView === 'org-management') {
           setSelectedOrg(null);
-          setDashboardView('organizations');
+          setRedisInstances([]);
+          setApiKeyCount(0);
+          setDashboardView('overview');
       }
   };
 
-  // --- ORG HANDLERS ---
   const handleCreateOrg = async (e: React.FormEvent) => {
       e.preventDefault();
       setLoading('create-org');
       try {
-          await createOrganization(token, { ...newOrgData, slug: newOrgData.slug || generateSlug(newOrgData.name) });
+          const newOrg = await createOrganization(token, { ...newOrgData, slug: newOrgData.slug || generateSlug(newOrgData.name) });
           setCreateOrgModalOpen(false);
+          addNotification(`Organization '${newOrgData.name}' created.`, 'success', { orgId: newOrg.id });
           setNewOrgData({ name: '', description: '', slug: '' });
-          fetchOrgs();
-      } catch (err) { setError(err instanceof Error ? err.message : 'Failed to create organization'); } 
+          fetchDashboardData();
+      } catch (err) { 
+        const message = err instanceof Error ? err.message : 'Failed to create organization';
+        setError(message);
+        addNotification(message, 'error');
+      } 
       finally { setLoading(''); }
   };
   
@@ -468,7 +545,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
         await updateOrganization(token, orgToEdit.id, { name: orgToEdit.name, description: orgToEdit.description, slug: orgToEdit.slug });
         setEditOrgModalOpen(false);
         setOrgToEdit(null);
-        fetchOrgs();
+        fetchDashboardData();
     } catch (err) { setError(err instanceof Error ? err.message : 'Failed to update organization'); }
     finally { setLoading(''); }
   };
@@ -479,10 +556,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
     setError(null);
     try {
         await deleteOrganization(token, orgToDelete.id);
+        addNotification(`Organization '${orgToDelete.name}' deleted successfully.`);
         setOrgToDelete(null);
-        fetchOrgs();
+        fetchDashboardData();
         if (selectedOrg?.id === orgToDelete.id) {
-            handleBack(); // Go back if we deleted the selected org
+            handleBack();
         }
     } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to delete organization';
@@ -492,27 +570,29 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
                 title: 'Deletion Failed',
                 message: 'This organization cannot be deleted because it has active Redis instances. Please remove all instances first.'
             });
-        } else {
-            setError(errorMessage);
+        } else { 
+          setError(errorMessage);
+          addNotification(errorMessage, 'error');
         }
-        setOrgToDelete(null); // Close confirmation modal on error
-    } finally {
-        setLoading('');
-    }
+        setOrgToDelete(null);
+    } finally { setLoading(''); }
   }
 
-
-  // --- REDIS HANDLERS ---
   const handleCreateRedis = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!selectedOrg) return;
       setLoading('create-redis');
       try {
-          await createRedisInstance(token, selectedOrg.id, { ...newRedisData, organization_id: selectedOrg.id });
+          const newInstance = await createRedisInstance(token, selectedOrg.id, { ...newRedisData, organization_id: selectedOrg.id });
           setCreateRedisModalOpen(false);
+          addNotification(`Redis instance '${newRedisData.name}' created.`, 'success', { orgId: selectedOrg.id, instanceId: newInstance.id });
           setNewRedisData({ name: '', slug: '', max_memory: 104857600, redis_version: '7.2', persistence_enabled: true, backup_enabled: false });
           fetchRedisInstances(selectedOrg.id);
-      } catch (err) { setError(err instanceof Error ? err.message : 'Failed to create Redis instance'); } 
+      } catch (err) { 
+        const message = err instanceof Error ? err.message : 'Failed to create Redis instance';
+        setError(message);
+        addNotification(message, 'error');
+       } 
       finally { setLoading(''); }
   };
 
@@ -521,9 +601,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
     setLoading('delete-redis');
     try {
         await deleteRedisInstance(token, selectedOrg.id, redisToDelete.id);
+        addNotification(`Redis instance '${redisToDelete.name}' deleted successfully.`);
         setRedisToDelete(null);
         fetchRedisInstances(selectedOrg.id);
-    } catch (err) { setError(err instanceof Error ? err.message : 'Failed to delete Redis instance'); }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to delete Redis instance';
+      setError(message); 
+      addNotification(message, 'error');
+    }
     finally { setLoading(''); }
   }
   
@@ -537,164 +622,193 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
     return <span className={`px-2 py-1 text-xs font-medium rounded-full border ${colorMap[status] || colorMap['stopped']}`}>{status}</span>
   };
 
-  const NavLink: React.FC<{ view: View, current: View, children: React.ReactNode, setView: (view: View) => void }> = ({ view, current, children, setView }) => (
+  const SidebarNavLink: React.FC<{ view: View, current: View, children: React.ReactNode, setView: (view: View) => void, icon: React.ReactNode }> = ({ view, current, children, setView, icon }) => (
     <button 
-        onClick={() => setView(view)} 
-        className={`text-sm font-medium transition-colors p-2 rounded-md ${current === view ? 'text-indigo-600 bg-indigo-50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'}`}
+        onClick={() => {
+          setView(view);
+          if (view === 'dashboard') {
+            setSelectedOrg(null);
+            setDashboardView('overview');
+          }
+        }} 
+        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-lg font-medium transition-all duration-200 ${current === view ? 'bg-gradient-to-r from-cyan-500 to-teal-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'}`}
     >
-        {children}
+        {icon}
+        <span>{children}</span>
     </button>
   );
 
-  const renderHeader = () => (
-      <header className="bg-white/80 backdrop-blur-sm p-4 sticky top-0 z-40 border-b border-slate-200">
-          <div className="container mx-auto flex justify-between items-center">
-              <div className="flex items-center gap-2 sm:gap-6">
-                <button className="flex items-center gap-3" onClick={handleGoToOrganizationsList}>
-                    <LogoIcon/>
-                    <h1 className="text-xl font-bold text-slate-900 hidden sm:block">RedisGate</h1>
-                </button>
-                <nav className="hidden lg:flex items-center gap-2">
-                    <NavLink view="docs" current={currentView} setView={handleNavigate}>Docs</NavLink>
-                    <NavLink view="guides" current={currentView} setView={handleNavigate}>User Guides</NavLink>
-                    <NavLink view="terms" current={currentView} setView={handleNavigate}>Terms of Service</NavLink>
-                </nav>
-              </div>
-              <div className="flex items-center gap-2">
-                  <div className="lg:hidden">
-                    <button onClick={() => setMobileMenuOpen(!isMobileMenuOpen)} className="p-2 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100">
-                        {isMobileMenuOpen ? <CloseIcon /> : <HamburgerIcon />}
-                    </button>
-                  </div>
-                  <div className="relative" ref={userMenuRef}>
-                    <button onClick={() => setUserMenuOpen(prev => !prev)} className="flex items-center gap-2 p-1 rounded-full hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        <span className="text-slate-700 font-medium hidden lg:block">{user.first_name} {user.last_name}</span>
-                        <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-600">
-                            <UserIcon />
-                        </div>
-                    </button>
-                    {isUserMenuOpen && (
-                        <div className="absolute right-0 mt-2 w-56 origin-top-right bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 animate-fadeInUp" style={{animationDuration: '0.15s'}}>
-                            <div className="py-1">
-                                <div className="px-4 py-2">
-                                    <p className="text-sm font-medium text-slate-900 truncate">{user.first_name} {user.last_name}</p>
-                                    <p className="text-sm text-slate-500 truncate">{user.email}</p>
-                                </div>
-                                <div className="border-t border-slate-200"></div>
-                                <button
-                                    onClick={() => { onLogout(); setUserMenuOpen(false); }}
-                                    className="w-full text-left flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-                                >
-                                    <LogoutIcon />
-                                    <span>Logout</span>
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                  </div>
-              </div>
-          </div>
-          {isMobileMenuOpen && (
-              <nav className="lg:hidden mt-4 container mx-auto flex flex-col items-start gap-2 animate-fadeInUp">
-                  <NavLink view="docs" current={currentView} setView={handleNavigate}>Docs</NavLink>
-                  <NavLink view="guides" current={currentView} setView={handleNavigate}>User Guides</NavLink>
-                  <NavLink view="terms" current={currentView} setView={handleNavigate}>Terms of Service</NavLink>
-              </nav>
-          )}
-      </header>
-  );
+  const filteredOrganizations = useMemo(() => {
+    if (!searchTerm || dashboardView !== 'overview') return organizations;
+    return organizations.filter(org => org.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [organizations, searchTerm, dashboardView]);
 
-  const renderOrganizations = () => (
+  const filteredRedisInstances = useMemo(() => {
+      if (!searchTerm || dashboardView !== 'org-management') return redisInstances;
+      return redisInstances.filter(inst => inst.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [redisInstances, searchTerm, dashboardView]);
+
+  const renderDashboardOverview = () => (
       <div>
           <div className="flex justify-between items-center mb-6">
-              <h2 className="text-3xl font-bold text-slate-900">Organizations</h2>
-              <button onClick={() => setCreateOrgModalOpen(true)} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg shadow-indigo-500/30">
+              <h2 className="text-3xl font-bold text-slate-900">Overview</h2>
+          </div>
+
+          {loading === 'dashboard-data' && !stats ? <div className="flex justify-center p-8"><SpinnerIcon /></div> :
+           stats ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-start justify-between">
+                    <div>
+                        <p className="text-sm font-medium text-slate-500">Total Organizations</p>
+                        <p className="text-3xl font-bold text-slate-900">{stats.organizations.toLocaleString()}</p>
+                    </div>
+                    <div className="p-3 bg-teal-100 rounded-lg"><BuildingOfficeIcon className="h-6 w-6 text-teal-600" /></div>
+                </div>
+                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-start justify-between">
+                    <div>
+                        <p className="text-sm font-medium text-slate-500">Total Redis Instances</p>
+                        <p className="text-3xl font-bold text-slate-900">{stats.redis_instances.toLocaleString()}</p>
+                    </div>
+                    <div className="p-3 bg-cyan-100 rounded-lg"><DatabaseIcon className="h-6 w-6 text-cyan-600" /></div>
+                </div>
+                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-start justify-between">
+                    <div>
+                        <p className="text-sm font-medium text-slate-500">Total API Keys</p>
+                        <p className="text-3xl font-bold text-slate-900">{stats.api_keys.toLocaleString()}</p>
+                    </div>
+                    <div className="p-3 bg-green-100 rounded-lg"><ApiKeyIcon className="h-6 w-6 text-green-600" /></div>
+                </div>
+            </div>
+           ) : null}
+
+          <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-slate-800">Your Organizations</h2>
+              <button onClick={() => setCreateOrgModalOpen(true)} className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg shadow-teal-500/30">
                   <PlusIcon /> Create
               </button>
           </div>
-          {loading === 'orgs' ? <div className="flex justify-center p-8"><SpinnerIcon /></div> :
+          <div className="mb-6 relative">
+              <input type="search" placeholder="Search organizations..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition" />
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><SearchIcon /></div>
+          </div>
+          {loading === 'dashboard-data' && organizations.length === 0 ? <div className="flex justify-center p-8"><SpinnerIcon /></div> :
            error && loading !== 'delete-org' ? <p className="text-red-700 bg-red-100 p-3 rounded-md">{error}</p> :
            organizations.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {organizations.map(org => (
-                    <div key={org.id} className="bg-white border border-slate-200 p-6 rounded-xl shadow-md flex flex-col justify-between transition-all duration-300 hover:shadow-lg hover:border-indigo-400 relative group">
-                        <div className="absolute top-3 right-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={(e) => { e.stopPropagation(); setOrgToEdit(org); setEditOrgModalOpen(true); }} className="p-2 rounded-full bg-slate-100 hover:bg-indigo-500 text-slate-500 hover:text-white"><EditIcon /></button>
-                            <button onClick={(e) => { e.stopPropagation(); setOrgToDelete(org); }} className="p-2 rounded-full bg-slate-100 hover:bg-red-500 text-slate-500 hover:text-white"><DeleteIcon /></button>
-                        </div>
-                        <div onClick={() => handleSelectOrg(org)} className="cursor-pointer">
-                            <div className="flex items-center gap-4 mb-3">
-                                <div className="p-2 bg-slate-100 rounded-lg"><BuildingOfficeIcon /></div>
-                                <h3 className="text-xl font-semibold text-slate-800">{org.name}</h3>
+            <>
+              {filteredOrganizations.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredOrganizations.map(org => (
+                        <div key={org.id} className="bg-white border border-slate-200 p-6 rounded-xl shadow-md flex flex-col justify-between transition-all duration-300 hover:shadow-lg hover:border-teal-400 relative group">
+                            <div className="absolute top-3 right-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onClick={(e) => { e.stopPropagation(); setOrgToEdit(org); setEditOrgModalOpen(true); }} className="p-2 rounded-full bg-slate-100 hover:bg-teal-500 text-slate-500 hover:text-white"><EditIcon /></button>
+                                <button onClick={(e) => { e.stopPropagation(); setOrgToDelete(org); }} className="p-2 rounded-full bg-slate-100 hover:bg-red-500 text-slate-500 hover:text-white"><DeleteIcon /></button>
                             </div>
-                            <p className="text-slate-600 text-sm mb-4 h-10 overflow-hidden">{org.description}</p>
-                            <div className="text-xs text-slate-500 border-t border-slate-200 pt-3">Plan: <span className="font-semibold text-indigo-600">{org.plan}</span></div>
+                            <div onClick={() => handleSelectOrg(org)} className="cursor-pointer">
+                                <div className="flex items-center gap-4 mb-3">
+                                    <div className="p-3 bg-slate-100 rounded-lg"><BuildingOfficeIcon className="h-6 w-6 text-teal-600" /></div>
+                                    <h3 className="text-xl font-semibold text-slate-800">{org.name}</h3>
+                                </div>
+                                <p className="text-slate-600 text-sm mb-4 h-10 overflow-hidden">{org.description}</p>
+                                <div className="text-xs text-slate-500 border-t border-slate-200 pt-3">Plan: <span className="font-semibold text-teal-600">{org.plan}</span></div>
+                            </div>
                         </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+              ) : (
+                <div className="text-center py-10 bg-white rounded-lg border border-slate-200"><p className="text-slate-500">No organizations found matching your search.</p></div>
+              )}
+            </>
           ) : <div className="text-center py-10 bg-white rounded-lg border border-slate-200"><p className="text-slate-500">No organizations found. Let's create one!</p></div>}
       </div>
   );
-
-  const renderRedisInstances = () => (
+  
+  const renderOrgManagementView = () => (
       <div>
-          <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center gap-4">
-                  <button onClick={handleBack} className="flex items-center gap-2 p-2 rounded-md hover:bg-slate-200 text-slate-500 hover:text-slate-900">
-                      <ArrowLeftIcon />
-                  </button>
-                  <h2 className="text-xl md:text-3xl font-bold text-slate-900 truncate">{selectedOrg?.name} / Instances</h2>
-              </div>
-              <button onClick={() => setCreateRedisModalOpen(true)} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg shadow-indigo-500/30">
-                  <PlusIcon /> Create
-              </button>
-          </div>
-          {loading === 'redis' ? <div className="flex justify-center p-8"><SpinnerIcon /></div> :
-           error && loading !== 'delete-redis' ? <p className="text-red-700 bg-red-100 p-3 rounded-md">{error}</p> :
-           redisInstances.length > 0 ? (
-            <div className="bg-white border border-slate-200 rounded-xl shadow-md overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-slate-50">
-                            <tr>
-                                <th className="p-4 font-semibold text-slate-600">Name</th>
-                                <th className="p-4 font-semibold text-slate-600">Status</th>
-                                <th className="p-4 font-semibold text-slate-600">Domain</th>
-                                <th className="p-4 font-semibold text-slate-600">Version</th>
-                                <th className="p-4 font-semibold text-slate-600">Memory</th>
-                                <th className="p-4 font-semibold text-slate-600">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {redisInstances.map(inst => (
-                                <tr key={inst.id} className="border-t border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => handleSelectInstance(inst)}>
-                                    <td className="p-4 flex items-center gap-3 text-slate-700"><DatabaseIcon /> {inst.name}</td>
-                                    <td className="p-4"><StatusBadge status={inst.status} /></td>
-                                    <td className="p-4 font-mono text-sm text-slate-500 truncate max-w-xs">{inst.domain}</td>
-                                    <td className="p-4 text-slate-700">v{inst.redis_version}</td>
-                                    <td className="p-4 text-slate-700">{(inst.max_memory / (1024 * 1024)).toFixed(0)} MB</td>
-                                    <td className="p-4"><button onClick={(e) => { e.stopPropagation(); setRedisToDelete(inst); }} className="p-2 rounded-full bg-slate-100 hover:bg-red-500 text-slate-500 hover:text-white"><DeleteIcon /></button></td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+        <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-4">
+                <button onClick={handleBack} className="flex items-center gap-2 p-2 rounded-md hover:bg-slate-200 text-slate-500 hover:text-slate-900">
+                    <ArrowLeftIcon />
+                </button>
+                <h2 className="text-xl md:text-3xl font-bold text-slate-900 truncate">{selectedOrg?.name} / Overview</h2>
             </div>
-           ) : <div className="text-center py-10 bg-white rounded-lg border border-slate-200"><p className="text-slate-500">No Redis instances found. Create one to get started.</p></div>}
+        </div>
+        
+        {/* Stats Section */}
+        {loading === 'org-data' ? <div className="flex justify-center p-8"><SpinnerIcon /></div> :
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-start justify-between">
+                <div>
+                    <p className="text-sm font-medium text-slate-500">Total Redis Instances</p>
+                    <p className="text-3xl font-bold text-slate-900">{redisInstances.length}</p>
+                </div>
+                 <div className="p-3 bg-cyan-100 rounded-lg"><DatabaseIcon className="h-6 w-6 text-cyan-600" /></div>
+            </div>
+            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-start justify-between">
+                 <div>
+                    <p className="text-sm font-medium text-slate-500">Active API Keys</p>
+                    <p className="text-3xl font-bold text-slate-900">{apiKeyCount}</p>
+                </div>
+                <div className="p-3 bg-green-100 rounded-lg"><ApiKeyIcon className="h-6 w-6 text-green-600" /></div>
+            </div>
+        </div>
+        }
+        
+        {/* Instances Section */}
+        <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-slate-800">Redis Instances</h2>
+            <button onClick={() => setCreateRedisModalOpen(true)} className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg shadow-teal-500/30">
+                <PlusIcon /> Create Instance
+            </button>
+        </div>
+        <div className="mb-6 relative">
+            <input type="search" placeholder="Search instances..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition" />
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><SearchIcon /></div>
+        </div>
+        {loading === 'redis' ? <div className="flex justify-center p-8"><SpinnerIcon /></div> :
+         error && loading !== 'delete-redis' ? <p className="text-red-700 bg-red-100 p-3 rounded-md">{error}</p> :
+         redisInstances.length > 0 ? (
+            filteredRedisInstances.length > 0 ? (
+                <div className="bg-white border border-slate-200 rounded-xl shadow-md overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="bg-slate-50">
+                                <tr>
+                                    <th className="p-4 font-semibold text-slate-600">Name</th>
+                                    <th className="p-4 font-semibold text-slate-600">Status</th>
+                                    <th className="p-4 font-semibold text-slate-600">Domain</th>
+                                    <th className="p-4 font-semibold text-slate-600">Version</th>
+                                    <th className="p-4 font-semibold text-slate-600">Memory</th>
+                                    <th className="p-4 font-semibold text-slate-600">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredRedisInstances.map(inst => (
+                                    <tr key={inst.id} className="border-t border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => handleSelectInstance(inst)}>
+                                        <td className="p-4 flex items-center gap-3 text-slate-700"><DatabaseIcon className="h-5 w-5 text-slate-500" /> {inst.name}</td>
+                                        <td className="p-4"><StatusBadge status={inst.status} /></td>
+                                        <td className="p-4 font-mono text-sm text-slate-500 truncate max-w-xs">{inst.domain}</td>
+                                        <td className="p-4 text-slate-700">v{inst.redis_version}</td>
+                                        <td className="p-4 text-slate-700">{(inst.max_memory / (1024 * 1024)).toFixed(0)} MB</td>
+                                        <td className="p-4"><button onClick={(e) => { e.stopPropagation(); setRedisToDelete(inst); }} className="p-2 rounded-full bg-slate-100 hover:bg-red-500 text-slate-500 hover:text-white"><DeleteIcon /></button></td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ) : (
+                <div className="text-center py-10 bg-white rounded-lg border border-slate-200"><p className="text-slate-500">No instances found matching your search.</p></div>
+            )
+         ) : <div className="text-center py-10 bg-white rounded-lg border border-slate-200"><p className="text-slate-500">No Redis instances found. Create one to get started.</p></div>}
       </div>
   );
-
+  
   const renderDashboardContent = () => {
     switch (dashboardView) {
-        case 'landing':
-            return <LandingPage onGetStarted={handleGetStarted} />;
-        case 'organizations':
-            return renderOrganizations();
-        case 'instances':
-            if (selectedOrg) return renderRedisInstances();
-            // Fallback if selectedOrg is missing
-            return renderOrganizations();
+        case 'overview':
+            return renderDashboardOverview();
+        case 'org-management':
+            return renderOrgManagementView();
         case 'details':
             if (selectedOrg && selectedInstance) {
                 return <InstanceDetailsView 
@@ -703,43 +817,149 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
                         onBack={handleBack}
                       />;
             }
-            // Fallback
-            return renderRedisInstances();
+            return renderOrgManagementView();
         default:
-             return <LandingPage onGetStarted={handleGetStarted} />;
+             return renderDashboardOverview();
     }
   }
   
-  const formFieldClasses = "w-full p-2 bg-slate-100 border border-slate-300 rounded-md text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition";
+  const formFieldClasses = "w-full p-2 bg-slate-100 border border-slate-300 rounded-md text-slate-900 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition";
   
   return (
-    <div className="flex flex-col min-h-screen">
-      {renderHeader()}
-      <main className="flex-grow container mx-auto p-4 md:p-8">
-        <div key={currentView} className="animate-fadeInUp">
-            {currentView === 'dashboard' && (
-                <div key={animation.key} className={animation.class}>
-                   {renderDashboardContent()}
-                </div>
-            )}
-            {currentView === 'docs' && <DocsPage />}
-            {currentView === 'guides' && <UserGuidesPage onNavigate={handleNavigate} />}
-            {currentView === 'terms' && <TermsOfServicePage />}
-        </div>
-      </main>
-
-      <footer className="bg-white border-t border-slate-200 py-6 mt-8">
-          <div className="container mx-auto text-center text-slate-500 text-sm">
-              <p>&copy; {new Date().getFullYear()} RedisGate. All rights reserved.</p>
+    <div className="flex min-h-screen bg-slate-100 font-sans">
+      {/* --- Popup Notification --- */}
+      <div 
+        className={`fixed top-8 right-8 z-[100] transition-all duration-300 ease-in-out ${popupNotification ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10 pointer-events-none'}`}
+      >
+        {popupNotification && (
+          <div className={`flex items-start gap-3 w-full max-w-sm p-4 rounded-lg shadow-2xl text-white ${popupNotification.type === 'success' ? 'bg-green-500' : 'bg-red-600'}`}>
+            <div className="mt-0.5 h-5 w-5 flex-shrink-0 flex items-center justify-center rounded-full bg-white/20">
+              {popupNotification.type === 'success' ? <CheckIcon/> : <WarningIcon/>}
+            </div>
+            <p className="text-sm font-semibold">{popupNotification.message}</p>
+            <button onClick={() => setPopupNotification(null)} className="ml-auto -mr-1 -mt-1 p-1 rounded-full hover:bg-white/20">&times;</button>
           </div>
-      </footer>
+        )}
+      </div>
 
+      {/* --- Sidebar --- */}
+      <aside className="w-64 bg-[#1C2434] text-gray-300 flex flex-col fixed h-full shadow-lg">
+          <div className="flex items-center gap-3 p-5 border-b border-slate-700/50">
+              <LogoIcon/>
+              <h1 className="text-xl font-bold text-white">RedisGate</h1>
+          </div>
+          <nav className="flex-grow p-4 space-y-2">
+              <SidebarNavLink view="dashboard" current={currentView} setView={setCurrentView} icon={<DashboardIcon />}>Dashboard</SidebarNavLink>
+              <div className="pt-4 mt-4 border-t border-slate-700/50 space-y-2">
+                  <p className="px-4 text-xs font-semibold text-slate-500 uppercase">Resources</p>
+                  <SidebarNavLink view="docs" current={currentView} setView={setCurrentView} icon={<FileTextIcon />}>Docs</SidebarNavLink>
+                  <SidebarNavLink view="guides" current={currentView} setView={setCurrentView} icon={<BookOpenIcon />}>User Guides</SidebarNavLink>
+              </div>
+          </nav>
+          <div className="p-4 border-t border-slate-700/50">
+            <div className="p-4 rounded-lg bg-slate-700/50 text-center">
+              <p className="text-sm font-semibold text-white flex items-center justify-center gap-2"><SystemStatusIcon />System Status</p>
+              {systemStatus === 'healthy' && <p className="text-xs text-green-400 mt-1">All services operational</p>}
+              {systemStatus === 'unhealthy' && <p className="text-xs text-red-400 mt-1">Service Disruption</p>}
+              {systemStatus === 'checking' && <p className="text-xs text-yellow-400 mt-1">Checking...</p>}
+            </div>
+            <button onClick={onLogout} className="w-full flex items-center justify-center gap-2 mt-4 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-700/50 hover:text-white transition-colors">
+              <LogoutIcon />
+              <span>Logout</span>
+            </button>
+          </div>
+      </aside>
+
+      {/* --- Main Content --- */}
+      <div className="flex-1 flex flex-col ml-64">
+          <header className="bg-white/80 backdrop-blur-sm p-4 sticky top-0 z-40 border-b border-slate-200">
+              <div className="flex justify-between items-center">
+                  <div className="flex-1">
+                      <h2 className="text-xl font-bold text-slate-800">Welcome back, {user.first_name}! 👋</h2>
+                      <p className="text-sm text-slate-500">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                      <div className="relative" ref={notificationMenuRef}>
+                        <button onClick={() => setNotificationMenuOpen(prev => !prev)} className="p-2 rounded-full text-slate-500 hover:text-slate-900 hover:bg-slate-100 relative">
+                            <BellIcon />
+                            {notifications.filter(n => !n.read).length > 0 && 
+                                <span className="absolute top-0 right-0 flex h-2 w-2">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                                </span>
+                            }
+                        </button>
+                        {isNotificationMenuOpen && (
+                          <div className="absolute right-0 mt-2 w-80 origin-top-right bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 animate-fadeInUp" style={{animationDuration: '0.15s'}}>
+                            <div className="p-3 border-b border-slate-200 flex justify-between items-center">
+                                <h4 className="text-sm font-semibold text-slate-800">Notifications</h4>
+                                <button onClick={() => setNotifications(prev => prev.map(n => ({...n, read: true})))} className="text-xs text-teal-600 hover:underline">Mark all as read</button>
+                            </div>
+                            <div className="py-1 max-h-80 overflow-y-auto">
+                              {notifications.length > 0 ? notifications.map(n => (
+                                <div 
+                                  key={n.id} 
+                                  onClick={() => handleNotificationClick(n)}
+                                  className={`px-4 py-3 text-sm flex items-start gap-3 transition-colors ${!n.read ? 'bg-teal-50' : 'bg-white'} ${n.context && n.type !== 'error' ? 'cursor-pointer hover:bg-teal-100' : ''}`}
+                                >
+                                  <div className={`mt-1 h-5 w-5 flex-shrink-0 flex items-center justify-center rounded-full ${n.type === 'success' ? 'bg-green-100' : 'bg-red-100'}`}>
+                                      {n.type === 'success' ? <CheckIcon/> : <WarningIcon/>}
+                                  </div>
+                                  <p className="text-slate-700">{n.message}</p>
+                                </div>
+                              )) : (
+                                <p className="text-center text-slate-500 py-6 text-sm">No new notifications.</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="relative" ref={userMenuRef}>
+                          <button onClick={() => setUserMenuOpen(prev => !prev)} className="flex items-center gap-2 p-1 rounded-full hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
+                              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-cyan-500 to-teal-600 flex items-center justify-center text-white font-bold">
+                                  {user.first_name.charAt(0)}{user.last_name.charAt(0)}
+                              </div>
+                          </button>
+                          {isUserMenuOpen && (
+                              <div className="absolute right-0 mt-2 w-56 origin-top-right bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 animate-fadeInUp" style={{animationDuration: '0.15s'}}>
+                                  <div className="py-1">
+                                      <div className="px-4 py-2">
+                                          <p className="text-sm font-medium text-slate-900 truncate">{user.first_name} {user.last_name}</p>
+                                          <p className="text-sm text-slate-500 truncate">{user.email}</p>
+                                      </div>
+                                      <div className="border-t border-slate-200"></div>
+                                      <button onClick={() => { onLogout(); setUserMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+                                          <LogoutIcon />
+                                          <span>Logout</span>
+                                      </button>
+                                  </div>
+                              </div>
+                          )}
+                      </div>
+                  </div>
+              </div>
+          </header>
+          <main className="flex-grow p-8">
+            <div key={currentView} className="animate-fadeInUp">
+                {currentView === 'dashboard' && (
+                    <div key={animation.key} className={animation.class}>
+                       {renderDashboardContent()}
+                    </div>
+                )}
+                {currentView === 'docs' && <DocsPage />}
+                {currentView === 'guides' && <UserGuidesPage onNavigate={(view) => setCurrentView(view)} />}
+                {/* FIX: Add rendering for TermsOfServicePage when currentView is 'terms'. */}
+                {currentView === 'terms' && <TermsOfServicePage />}
+            </div>
+          </main>
+      </div>
+      
       {/* --- Modals --- */}
       <Modal isOpen={isCreateOrgModalOpen} onClose={() => setCreateOrgModalOpen(false)} title="Create New Organization">
           <form onSubmit={handleCreateOrg} className="space-y-4">
               <input type="text" placeholder="Organization Name" value={newOrgData.name} onChange={e => setNewOrgData({...newOrgData, name: e.target.value})} className={formFieldClasses} required />
               <textarea placeholder="Description" value={newOrgData.description} onChange={e => setNewOrgData({...newOrgData, description: e.target.value})} className={formFieldClasses} rows={3}></textarea>
-              <button type="submit" disabled={loading === 'create-org'} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg disabled:bg-indigo-400 transition-colors">
+              <button type="submit" disabled={loading === 'create-org'} className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg disabled:bg-teal-400 transition-colors">
                   {loading === 'create-org' ? 'Creating...' : 'Create Organization'}
               </button>
               {error && loading === 'create-org' && <p className="text-sm text-red-700 text-center mt-2">{error}</p>}
@@ -751,7 +971,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
               <input type="text" placeholder="Organization Name" value={orgToEdit?.name || ''} onChange={e => setOrgToEdit(org => org ? {...org, name: e.target.value} : null)} className={formFieldClasses} required />
               <input type="text" placeholder="Slug" value={orgToEdit?.slug || ''} onChange={e => setOrgToEdit(org => org ? {...org, slug: e.target.value} : null)} className={formFieldClasses} required />
               <textarea placeholder="Description" value={orgToEdit?.description || ''} onChange={e => setOrgToEdit(org => org ? {...org, description: e.target.value} : null)} className={formFieldClasses} rows={3}></textarea>
-              <button type="submit" disabled={loading === 'edit-org'} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg disabled:bg-indigo-400 transition-colors">
+              <button type="submit" disabled={loading === 'edit-org'} className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg disabled:bg-teal-400 transition-colors">
                   {loading === 'edit-org' ? 'Saving...' : 'Save Changes'}
               </button>
               {error && loading === 'edit-org' && <p className="text-sm text-red-700 text-center mt-2">{error}</p>}
@@ -772,13 +992,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
               <input type="number" placeholder="Max Memory (MB)" value={newRedisData.max_memory / (1024*1024)} onChange={e => setNewRedisData({...newRedisData, max_memory: parseInt(e.target.value) * 1024 * 1024})} className={formFieldClasses} required />
               <div className="flex items-center justify-between pt-2">
                   <label htmlFor="persistence_enabled" className="text-slate-700">Enable Persistence</label>
-                  <input type="checkbox" id="persistence_enabled" checked={newRedisData.persistence_enabled} onChange={e => setNewRedisData({...newRedisData, persistence_enabled: e.target.checked})} className="h-5 w-5 rounded bg-slate-100 border-slate-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-white" />
+                  <input type="checkbox" id="persistence_enabled" checked={newRedisData.persistence_enabled} onChange={e => setNewRedisData({...newRedisData, persistence_enabled: e.target.checked})} className="h-5 w-5 rounded bg-slate-100 border-slate-300 text-teal-600 focus:ring-teal-500 focus:ring-offset-white" />
               </div>
               <div className="flex items-center justify-between">
                   <label htmlFor="backup_enabled" className="text-slate-700">Enable Backups</label>
-                  <input type="checkbox" id="backup_enabled" checked={newRedisData.backup_enabled} onChange={e => setNewRedisData({...newRedisData, backup_enabled: e.target.checked})} className="h-5 w-5 rounded bg-slate-100 border-slate-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-white" />
+                  <input type="checkbox" id="backup_enabled" checked={newRedisData.backup_enabled} onChange={e => setNewRedisData({...newRedisData, backup_enabled: e.target.checked})} className="h-5 w-5 rounded bg-slate-100 border-slate-300 text-teal-600 focus:ring-teal-500 focus:ring-offset-white" />
               </div>
-              <button type="submit" disabled={loading === 'create-redis'} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg disabled:bg-indigo-400 !mt-6">
+              <button type="submit" disabled={loading === 'create-redis'} className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg disabled:bg-teal-400 !mt-6">
                   {loading === 'create-redis' ? 'Creating...' : 'Create Instance'}
               </button>
               {error && loading === 'create-redis' && <p className="text-sm text-red-700 text-center mt-2">{error}</p>}

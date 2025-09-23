@@ -1,11 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Dashboard from './components/Dashboard';
 import AuthPage from './components/AuthPage';
+import WelcomePage from './components/WelcomePage';
+import DocsPage from './components/DocsPage';
+import UserGuidesPage from './components/UserGuidesPage';
+import TermsOfServicePage from './components/TermsOfServicePage';
 import { User } from './types';
+
+type PublicView = 'welcome' | 'docs' | 'guides' | 'terms';
+type PageView = PublicView | 'dashboard' | 'auth';
 
 const App: React.FC = () => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('authToken'));
   const [user, setUser] = useState<User | null>(JSON.parse(localStorage.getItem('authUser') || 'null'));
+  const [page, setPage] = useState<PageView>(token ? 'dashboard' : 'welcome');
 
   useEffect(() => {
     const storedToken = localStorage.getItem('authToken');
@@ -13,6 +21,9 @@ const App: React.FC = () => {
     if (storedToken && storedUser) {
       setToken(storedToken);
       setUser(JSON.parse(storedUser));
+      setPage('dashboard');
+    } else {
+      setPage('welcome');
     }
   }, []);
 
@@ -21,6 +32,7 @@ const App: React.FC = () => {
     localStorage.setItem('authUser', JSON.stringify(newUser));
     setToken(newToken);
     setUser(newUser);
+    setPage('dashboard');
   }, []);
 
   const handleLogout = useCallback(() => {
@@ -28,15 +40,45 @@ const App: React.FC = () => {
     localStorage.removeItem('authUser');
     setToken(null);
     setUser(null);
+    setPage('welcome');
   }, []);
+
+  const renderPage = () => {
+    if (page === 'dashboard' && token && user) {
+      return <Dashboard user={user} onLogout={handleLogout} token={token} />;
+    }
+    if (page === 'auth') {
+      return <AuthPage onLoginSuccess={handleLoginSuccess} onBack={() => setPage('welcome')} />;
+    }
+    
+    // Render public-facing pages within the WelcomePage layout
+    let pageContent: React.ReactNode = null;
+    switch(page) {
+      case 'docs':
+        pageContent = <div className="bg-white p-6 sm:p-10 rounded-xl shadow-md border border-slate-200 my-16"><DocsPage /></div>;
+        break;
+      case 'guides':
+        pageContent = <div className="my-16"><UserGuidesPage onNavigate={(view) => setPage(view)} /></div>;
+        break;
+      case 'terms':
+        pageContent = <div className="my-16"><TermsOfServicePage /></div>;
+        break;
+    }
+
+    return (
+      <WelcomePage
+        activePage={page as PublicView}
+        onNavigate={setPage}
+        onNavigateToAuth={() => setPage('auth')}
+      >
+        {pageContent}
+      </WelcomePage>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
-      {token && user ? (
-        <Dashboard user={user} onLogout={handleLogout} token={token} />
-      ) : (
-        <AuthPage onLoginSuccess={handleLoginSuccess} />
-      )}
+      {renderPage()}
     </div>
   );
 };
