@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Organization, RedisInstance, User, SystemStats } from '../types';
 import { getOrganizations, getRedisInstances, createOrganization, createRedisInstance, updateOrganization, deleteOrganization, deleteRedisInstance, getApiKeys, getSystemHealth, getSystemStats } from '../services/api';
-import { BuildingOfficeIcon, DatabaseIcon, PlusIcon, LogoutIcon, ArrowLeftIcon, SpinnerIcon, EditIcon, DeleteIcon, LogoIcon, WarningIcon, CopyIcon, CheckIcon, UserIcon, DashboardIcon, ApiKeyIcon, SettingsIcon, BellIcon, SearchIcon, SystemStatusIcon, LifeBuoyIcon, FileTextIcon, BookOpenIcon, ChevronDownIcon } from './ui/Icons';
+import { BuildingOfficeIcon, DatabaseIcon, PlusIcon, LogoutIcon, ArrowLeftIcon, SpinnerIcon, EditIcon, DeleteIcon, LogoIcon, WarningIcon, CopyIcon, CheckIcon, UserIcon, DashboardIcon, ApiKeyIcon, SettingsIcon, BellIcon, SearchIcon, SystemStatusIcon, LifeBuoyIcon, FileTextIcon, BookOpenIcon, ChevronDownIcon, HamburgerIcon, CloseIcon } from './ui/Icons';
 import DocsPage from './DocsPage';
 import UserGuidesPage from './UserGuidesPage';
 // FIX: Import TermsOfServicePage to handle rendering for the 'terms' view.
@@ -183,14 +183,14 @@ const InstanceDetailsView: React.FC<{ selectedOrg: Organization; selectedInstanc
 
     return (
         <div>
-             <div className="flex justify-between items-center mb-6">
+             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
                 <div className="flex items-center gap-4">
                     <button onClick={onBack} className="flex items-center gap-2 p-2 rounded-md hover:bg-slate-200 text-slate-500 hover:text-slate-900">
                         <ArrowLeftIcon />
                     </button>
-                    <div>
+                    <div className="min-w-0">
                         <h2 className="text-xl md:text-3xl font-bold text-slate-900 truncate">{selectedInstance.name} - API Guide</h2>
-                        <p className="text-slate-500 font-mono text-sm">{selectedInstance.domain}</p>
+                        <p className="text-slate-500 font-mono text-sm break-all">{selectedInstance.domain}</p>
                     </div>
                 </div>
             </div>
@@ -241,16 +241,16 @@ const InstanceDetailsView: React.FC<{ selectedOrg: Organization; selectedInstanc
                                 <div key={ep.path} className={`border ${isExpanded ? color.border : 'border-slate-200'} rounded-lg overflow-hidden transition-all duration-300 ${isExpanded ? 'shadow-lg' : 'shadow-sm'}`}>
                                     <div
                                         onClick={handleToggleExpand}
-                                        className={`flex items-center justify-between p-3 ${isExpandable ? 'cursor-pointer' : ''} ${color.bg} ${isExpandable ? color.hoverBg : ''} transition-colors`}
+                                        className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 gap-2 ${isExpandable ? 'cursor-pointer' : ''} ${color.bg} ${isExpandable ? color.hoverBg : ''} transition-colors`}
                                     >
-                                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                                        <div className="flex items-center gap-4 flex-1 min-w-0 w-full">
                                             <span className={`font-mono text-sm font-bold w-[70px] text-center flex-shrink-0 ${color.text}`}>{ep.method}</span>
-                                            <span className="font-mono text-sm text-slate-700 break-words min-w-0">{displayPath}</span>
+                                            <span className="font-mono text-sm text-slate-700 break-all min-w-0">{displayPath}</span>
                                         </div>
-                                        <div className="flex items-center gap-4 ml-4">
+                                        <div className="flex items-center gap-4 sm:ml-4 w-full sm:w-auto justify-end">
                                             <p className="text-sm text-slate-600 hidden md:block flex-shrink-0">{ep.description}</p>
                                             {!isExpandable && (
-                                                <button onClick={(e) => { e.stopPropagation(); handleCopy(finalUrl); }} className="flex items-center gap-1.5 text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-md transition-colors">
+                                                <button onClick={(e) => { e.stopPropagation(); handleCopy(finalUrl); }} className="flex items-center gap-1.5 text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-md transition-colors flex-shrink-0">
                                                     {copiedText === finalUrl ? <><CheckIcon /> Copied</> : <><CopyIcon /> Copy</>}
                                                 </button>
                                             )}
@@ -267,8 +267,8 @@ const InstanceDetailsView: React.FC<{ selectedOrg: Organization; selectedInstanc
                                             <h4 className="font-semibold text-slate-800 text-md mb-3">Parameters</h4>
                                             <div className="space-y-3">
                                                 {params.map(param => (
-                                                    <div key={param} className="grid grid-cols-[120px_1fr] items-center gap-3">
-                                                        <label htmlFor={param} className="font-mono text-sm text-slate-600 text-right font-medium">
+                                                    <div key={param} className="grid grid-cols-1 sm:grid-cols-[120px_1fr] items-center gap-2 sm:gap-3">
+                                                        <label htmlFor={param} className="font-mono text-sm text-slate-600 text-left sm:text-right font-medium">
                                                             {param}
                                                             <span className="text-red-500 ml-1">*</span>
                                                         </label>
@@ -300,9 +300,58 @@ const InstanceDetailsView: React.FC<{ selectedOrg: Organization; selectedInstanc
     )
 }
 
+// FIX: Added 'terms' to the View type to match the props of UserGuidesPage, resolving a TypeScript error.
+type View = 'dashboard' | 'docs' | 'guides' | 'terms';
+
+const SidebarNavLink: React.FC<{ view: View, current: View, children: React.ReactNode, setView: (view: View) => void, icon: React.ReactNode }> = ({ view, current, children, setView, icon }) => (
+    <button 
+        onClick={() => setView(view)} 
+        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-lg font-medium transition-all duration-200 ${current === view ? 'bg-gradient-to-r from-cyan-500 to-teal-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'}`}
+    >
+        {icon}
+        <span>{children}</span>
+    </button>
+  );
+
+const SidebarContent: React.FC<{ onLogout: () => void; currentView: View; setView: (view: View) => void; systemStatus: 'healthy' | 'unhealthy' | 'checking'; onLinkClick?: () => void }> = ({ onLogout, currentView, setView: rawSetView, systemStatus, onLinkClick }) => {
+    
+    const setView = (view: View) => {
+        rawSetView(view);
+        if (onLinkClick) onLinkClick();
+    };
+    
+    return (
+        <>
+            <div className="flex items-center gap-3 p-5 border-b border-slate-700/50">
+                <LogoIcon/>
+                <h1 className="text-xl font-bold text-white">RedisGate</h1>
+            </div>
+            <nav className="flex-grow p-4 space-y-2">
+                <SidebarNavLink view="dashboard" current={currentView} setView={setView} icon={<DashboardIcon />}>Dashboard</SidebarNavLink>
+                <div className="pt-4 mt-4 border-t border-slate-700/50 space-y-2">
+                    <p className="px-4 text-xs font-semibold text-slate-500 uppercase">Resources</p>
+                    <SidebarNavLink view="docs" current={currentView} setView={setView} icon={<FileTextIcon />}>Docs</SidebarNavLink>
+                    <SidebarNavLink view="guides" current={currentView} setView={setView} icon={<BookOpenIcon />}>User Guides</SidebarNavLink>
+                </div>
+            </nav>
+            <div className="p-4 border-t border-slate-700/50">
+                <div className="p-4 rounded-lg bg-slate-700/50 text-center">
+                    <p className="text-sm font-semibold text-white flex items-center justify-center gap-2"><SystemStatusIcon />System Status</p>
+                    {systemStatus === 'healthy' && <p className="text-xs text-green-400 mt-1">All services operational</p>}
+                    {systemStatus === 'unhealthy' && <p className="text-xs text-red-400 mt-1">Service Disruption</p>}
+                    {systemStatus === 'checking' && <p className="text-xs text-yellow-400 mt-1">Checking...</p>}
+                </div>
+                <button onClick={onLogout} className="w-full flex items-center justify-center gap-2 mt-4 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-700/50 hover:text-white transition-colors">
+                    <LogoutIcon />
+                    <span>Logout</span>
+                </button>
+            </div>
+        </>
+    );
+};
+
+
 const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
-  // FIX: Added 'terms' to the View type to match the props of UserGuidesPage, resolving a TypeScript error.
-  type View = 'dashboard' | 'docs' | 'guides' | 'terms';
   type DashboardSubView = 'overview' | 'org-management' | 'details';
   
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -318,6 +367,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
   const [dashboardView, setDashboardView] = useState<DashboardSubView>('overview');
   const [animation, setAnimation] = useState({ class: 'animate-fadeInUp', key: Date.now() });
   const [searchTerm, setSearchTerm] = useState('');
+  const [isMobileNavOpen, setMobileNavOpen] = useState(false);
 
   const [selectedInstance, setSelectedInstance] = useState<RedisInstance | null>(null);
   const [isUserMenuOpen, setUserMenuOpen] = useState(false);
@@ -346,6 +396,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
   const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [systemStatus, setSystemStatus] = useState<'healthy' | 'unhealthy' | 'checking'>('checking');
+
+  const handleSetView = (view: View) => {
+    if (view === 'dashboard' && currentView !== 'dashboard') {
+      setSelectedOrg(null);
+      setDashboardView('overview');
+    }
+    setCurrentView(view);
+  };
 
   useEffect(() => {
     const checkHealth = async () => {
@@ -622,22 +680,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
     return <span className={`px-2 py-1 text-xs font-medium rounded-full border ${colorMap[status] || colorMap['stopped']}`}>{status}</span>
   };
 
-  const SidebarNavLink: React.FC<{ view: View, current: View, children: React.ReactNode, setView: (view: View) => void, icon: React.ReactNode }> = ({ view, current, children, setView, icon }) => (
-    <button 
-        onClick={() => {
-          setView(view);
-          if (view === 'dashboard') {
-            setSelectedOrg(null);
-            setDashboardView('overview');
-          }
-        }} 
-        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-lg font-medium transition-all duration-200 ${current === view ? 'bg-gradient-to-r from-cyan-500 to-teal-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'}`}
-    >
-        {icon}
-        <span>{children}</span>
-    </button>
-  );
-
   const filteredOrganizations = useMemo(() => {
     if (!searchTerm || dashboardView !== 'overview') return organizations;
     return organizations.filter(org => org.name.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -768,7 +810,30 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
          error && loading !== 'delete-redis' ? <p className="text-red-700 bg-red-100 p-3 rounded-md">{error}</p> :
          redisInstances.length > 0 ? (
             filteredRedisInstances.length > 0 ? (
-                <div className="bg-white border border-slate-200 rounded-xl shadow-md overflow-hidden">
+              <>
+                {/* Mobile Card View */}
+                <div className="grid grid-cols-1 gap-4 md:hidden">
+                    {filteredRedisInstances.map(inst => (
+                        <div key={inst.id} className="bg-white border border-slate-200 rounded-xl shadow-md p-4 space-y-3">
+                            <div className="flex justify-between items-start">
+                                <div onClick={() => handleSelectInstance(inst)} className="cursor-pointer flex items-center gap-3 font-semibold text-slate-800">
+                                    <DatabaseIcon className="h-5 w-5 text-slate-500" />
+                                    <span>{inst.name}</span>
+                                </div>
+                                <button onClick={(e) => { e.stopPropagation(); setRedisToDelete(inst); }} className="p-2 -mt-1 -mr-1 rounded-full bg-slate-100 hover:bg-red-500 text-slate-500 hover:text-white"><DeleteIcon /></button>
+                            </div>
+                            <div className="space-y-2 text-sm pl-8">
+                                <div className="flex justify-between"><span className="font-medium text-slate-500">Status:</span> <StatusBadge status={inst.status} /></div>
+                                <div className="flex justify-between items-start gap-2"><span className="font-medium text-slate-500 flex-shrink-0">Domain:</span> <span className="font-mono text-xs text-slate-600 text-right break-all">{inst.domain}</span></div>
+                                <div className="flex justify-between"><span className="font-medium text-slate-500">Version:</span> <span className="text-slate-700">v{inst.redis_version}</span></div>
+                                <div className="flex justify-between"><span className="font-medium text-slate-500">Memory:</span> <span className="text-slate-700">{(inst.max_memory / (1024 * 1024)).toFixed(0)} MB</span></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block bg-white border border-slate-200 rounded-xl shadow-md overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
                             <thead className="bg-slate-50">
@@ -796,6 +861,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
                         </table>
                     </div>
                 </div>
+              </>
             ) : (
                 <div className="text-center py-10 bg-white rounded-lg border border-slate-200"><p className="text-slate-500">No instances found matching your search.</p></div>
             )
@@ -842,41 +908,47 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
         )}
       </div>
 
-      {/* --- Sidebar --- */}
-      <aside className="w-64 bg-[#1C2434] text-gray-300 flex flex-col fixed h-full shadow-lg">
-          <div className="flex items-center gap-3 p-5 border-b border-slate-700/50">
-              <LogoIcon/>
-              <h1 className="text-xl font-bold text-white">RedisGate</h1>
-          </div>
-          <nav className="flex-grow p-4 space-y-2">
-              <SidebarNavLink view="dashboard" current={currentView} setView={setCurrentView} icon={<DashboardIcon />}>Dashboard</SidebarNavLink>
-              <div className="pt-4 mt-4 border-t border-slate-700/50 space-y-2">
-                  <p className="px-4 text-xs font-semibold text-slate-500 uppercase">Resources</p>
-                  <SidebarNavLink view="docs" current={currentView} setView={setCurrentView} icon={<FileTextIcon />}>Docs</SidebarNavLink>
-                  <SidebarNavLink view="guides" current={currentView} setView={setCurrentView} icon={<BookOpenIcon />}>User Guides</SidebarNavLink>
-              </div>
-          </nav>
-          <div className="p-4 border-t border-slate-700/50">
-            <div className="p-4 rounded-lg bg-slate-700/50 text-center">
-              <p className="text-sm font-semibold text-white flex items-center justify-center gap-2"><SystemStatusIcon />System Status</p>
-              {systemStatus === 'healthy' && <p className="text-xs text-green-400 mt-1">All services operational</p>}
-              {systemStatus === 'unhealthy' && <p className="text-xs text-red-400 mt-1">Service Disruption</p>}
-              {systemStatus === 'checking' && <p className="text-xs text-yellow-400 mt-1">Checking...</p>}
-            </div>
-            <button onClick={onLogout} className="w-full flex items-center justify-center gap-2 mt-4 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-700/50 hover:text-white transition-colors">
-              <LogoutIcon />
-              <span>Logout</span>
-            </button>
-          </div>
+      {/* --- Desktop Sidebar --- */}
+      <aside className="w-64 bg-[#1C2434] text-gray-300 flex-col fixed h-full shadow-lg hidden md:flex">
+          <SidebarContent 
+            onLogout={onLogout}
+            currentView={currentView}
+            setView={handleSetView}
+            systemStatus={systemStatus}
+          />
       </aside>
 
+      {/* --- Mobile Sidebar --- */}
+      <div className={`md:hidden fixed inset-0 z-[99] transition-all duration-300 ease-in-out ${isMobileNavOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+        {/* Backdrop */}
+        <div className={`fixed inset-0 bg-black/60 transition-opacity ${isMobileNavOpen ? 'opacity-100' : 'opacity-0'}`} onClick={() => setMobileNavOpen(false)} />
+        {/* Panel */}
+        <div className={`fixed inset-y-0 left-0 z-[100] w-64 bg-[#1C2434] text-gray-300 shadow-xl transition-transform ease-in-out duration-300 ${isMobileNavOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <div className="flex h-full flex-col">
+              <SidebarContent 
+                onLogout={onLogout}
+                currentView={currentView}
+                setView={handleSetView}
+                systemStatus={systemStatus}
+                onLinkClick={() => setMobileNavOpen(false)}
+              />
+          </div>
+        </div>
+      </div>
+
+
       {/* --- Main Content --- */}
-      <div className="flex-1 flex flex-col ml-64">
+      <div className="flex-1 flex flex-col md:ml-64">
           <header className="bg-white/80 backdrop-blur-sm p-4 sticky top-0 z-40 border-b border-slate-200">
               <div className="flex justify-between items-center">
-                  <div className="flex-1">
-                      <h2 className="text-xl font-bold text-slate-800">Welcome back, {user.first_name}! 👋</h2>
-                      <p className="text-sm text-slate-500">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                  <div className="flex items-center gap-2">
+                      <button onClick={() => setMobileNavOpen(true)} className="p-2 rounded-full text-slate-500 hover:text-slate-900 hover:bg-slate-100 md:hidden" aria-label="Open navigation">
+                        <HamburgerIcon />
+                      </button>
+                      <div>
+                        <h2 className="text-xl font-bold text-slate-800">Welcome back, {user.first_name}! 👋</h2>
+                        <p className="text-sm text-slate-500">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                      </div>
                   </div>
                   <div className="flex items-center gap-4">
                       <div className="relative" ref={notificationMenuRef}>
@@ -939,7 +1011,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, token, onLogout }) => {
                   </div>
               </div>
           </header>
-          <main className="flex-grow p-8">
+          <main className="flex-grow p-4 sm:p-8">
             <div key={currentView} className="animate-fadeInUp">
                 {currentView === 'dashboard' && (
                     <div key={animation.key} className={animation.class}>
