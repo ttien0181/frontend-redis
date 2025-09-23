@@ -53,7 +53,7 @@ const UserGuidesPage: React.FC<UserGuidesPageProps> = ({ onNavigate }) => {
                 <p>The platform is fully API-driven. You can automate and manage your resources programmatically.</p>
                 <ul>
                     <li><strong>Authentication:</strong> Most API routes are protected. Management routes (like creating organizations or instances) require a JWT Bearer token obtained upon login. Direct Redis commands require an API key specific to an organization.</li>
-                    <li><strong>Finding Endpoints:</strong> A complete list of available endpoints and their functions can be found on the <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('docs'); }} className="font-medium text-indigo-600 hover:underline">Docs</a> page.</li>
+                    <li><strong>Finding Endpoints:</strong> A complete list of available endpoints and their functions can be found on the <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('docs'); }} className="font-medium text-teal-600 hover:underline">Docs</a> page.</li>
                     <li><strong>Interacting with Redis:</strong> The easiest way to start is by navigating to an instance's detail page, which provides copy-paste ready URLs for common Redis commands like <code>GET</code>, <code>SET</code>, and <code>DEL</code>.</li>
                 </ul>
             </GuideSection>
@@ -61,7 +61,7 @@ const UserGuidesPage: React.FC<UserGuidesPageProps> = ({ onNavigate }) => {
                 .prose ol, .prose ul { padding-left: 1.5rem; }
                 .prose li { margin-bottom: 0.5rem; }
                 .prose strong { color: #1e293b; }
-                .prose a { color: #4f46e5; text-decoration: none; }
+                .prose a { color: #0d9488; text-decoration: none; }
                 .prose a:hover { text-decoration: underline; }
             `}</style>
         </div>

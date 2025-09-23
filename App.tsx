@@ -14,6 +14,7 @@ const App: React.FC = () => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('authToken'));
   const [user, setUser] = useState<User | null>(JSON.parse(localStorage.getItem('authUser') || 'null'));
   const [page, setPage] = useState<PageView>(token ? 'dashboard' : 'welcome');
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
 
   useEffect(() => {
     const storedToken = localStorage.getItem('authToken');
@@ -43,25 +44,35 @@ const App: React.FC = () => {
     setPage('welcome');
   }, []);
 
+  const handleNavigateToLogin = () => {
+      setAuthMode('login');
+      setPage('auth');
+  };
+
+  const handleNavigateToRegister = () => {
+      setAuthMode('register');
+      setPage('auth');
+  };
+
   const renderPage = () => {
     if (page === 'dashboard' && token && user) {
       return <Dashboard user={user} onLogout={handleLogout} token={token} />;
     }
     if (page === 'auth') {
-      return <AuthPage onLoginSuccess={handleLoginSuccess} onBack={() => setPage('welcome')} />;
+      return <AuthPage onLoginSuccess={handleLoginSuccess} onBack={() => setPage('welcome')} initialView={authMode} />;
     }
     
     // Render public-facing pages within the WelcomePage layout
     let pageContent: React.ReactNode = null;
     switch(page) {
       case 'docs':
-        pageContent = <div className="bg-white p-6 sm:p-10 rounded-xl shadow-md border border-slate-200 my-16"><DocsPage /></div>;
+        pageContent = <div key={page} className="bg-white p-6 sm:p-10 rounded-xl shadow-md border border-slate-200 my-16 animate-fadeInUp"><DocsPage /></div>;
         break;
       case 'guides':
-        pageContent = <div className="my-16"><UserGuidesPage onNavigate={(view) => setPage(view)} /></div>;
+        pageContent = <div key={page} className="my-16 animate-fadeInUp"><UserGuidesPage onNavigate={(view) => setPage(view)} /></div>;
         break;
       case 'terms':
-        pageContent = <div className="my-16"><TermsOfServicePage /></div>;
+        pageContent = <div key={page} className="my-16 animate-fadeInUp"><TermsOfServicePage /></div>;
         break;
     }
 
@@ -69,7 +80,8 @@ const App: React.FC = () => {
       <WelcomePage
         activePage={page as PublicView}
         onNavigate={setPage}
-        onNavigateToAuth={() => setPage('auth')}
+        onNavigateToLogin={handleNavigateToLogin}
+        onNavigateToRegister={handleNavigateToRegister}
       >
         {pageContent}
       </WelcomePage>

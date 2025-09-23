@@ -6,13 +6,14 @@ import { SystemStats } from '../types';
 type PublicView = 'welcome' | 'docs' | 'guides' | 'terms';
 
 interface WelcomePageProps {
-  onNavigateToAuth: () => void;
+  onNavigateToLogin: () => void;
+  onNavigateToRegister: () => void;
   onNavigate: (page: PublicView) => void;
   activePage: PublicView;
   children?: React.ReactNode;
 }
 
-const WelcomeContent: React.FC<{onNavigateToAuth: () => void;}> = ({ onNavigateToAuth }) => {
+const WelcomeContent: React.FC<{onNavigateToRegister: () => void;}> = ({ onNavigateToRegister }) => {
   const [stats, setStats] = useState<SystemStats['tables'] | null>(null);
 
   useEffect(() => {
@@ -136,8 +137,8 @@ const WelcomeContent: React.FC<{onNavigateToAuth: () => void;}> = ({ onNavigateT
             </p>
             <div className="mt-10 flex items-center justify-center gap-x-6 animate-fadeInUp" style={{ animationDelay: '550ms' }}>
                 <button
-                    onClick={onNavigateToAuth}
-                    className="rounded-md bg-gradient-to-r from-cyan-500 to-teal-600 px-4 py-2.5 text-base font-semibold text-white shadow-lg hover:shadow-xl hover:opacity-90 transition-all duration-300 transform hover:scale-105"
+                    onClick={onNavigateToRegister}
+                    className="rounded-xl bg-gradient-to-r from-cyan-500 to-teal-600 px-4 py-2.5 text-base font-semibold text-white shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
                 >
                     Start Free Trial
                 </button>
@@ -145,7 +146,7 @@ const WelcomeContent: React.FC<{onNavigateToAuth: () => void;}> = ({ onNavigateT
                     href="https://github.com/AI-Decenter/RedisGate"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 rounded-md bg-white px-4 py-2.5 text-base font-semibold text-slate-900 shadow-md ring-1 ring-inset ring-slate-300 hover:bg-slate-50 transition-colors"
+                    className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-base font-semibold text-slate-900 shadow-md ring-1 ring-inset ring-slate-300 hover:bg-slate-50 transition-all duration-300 transform hover:scale-105"
                 >
                     <GitHubIcon />
                     View on GitHub
@@ -191,7 +192,7 @@ const WelcomeContent: React.FC<{onNavigateToAuth: () => void;}> = ({ onNavigateT
 };
 
 
-const WelcomePage: React.FC<WelcomePageProps> = ({ onNavigateToAuth, onNavigate, activePage, children }) => {
+const WelcomePage: React.FC<WelcomePageProps> = ({ onNavigateToLogin, onNavigateToRegister, onNavigate, activePage, children }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
@@ -243,13 +244,18 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onNavigateToAuth, onNavigate,
               </button>
             ))}
           </div>
-          <div className="hidden lg:flex lg:flex-1 lg:justify-end">
+          <div className="hidden lg:flex lg:flex-1 lg:justify-end items-center gap-x-4">
              <button
-                onClick={onNavigateToAuth}
-                className="group inline-flex items-center justify-center rounded-md bg-gradient-to-r from-cyan-500 to-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all duration-300 hover:shadow-lg hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 focus:ring-offset-white"
+                onClick={onNavigateToLogin}
+                className="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-100 transition-all duration-300 transform hover:scale-105"
               >
-                <span>Log in</span>
-                <span className="ml-1.5 transition-transform duration-300 group-hover:translate-x-1" aria-hidden="true">&rarr;</span>
+                Log in
+            </button>
+            <button
+                onClick={onNavigateToRegister}
+                className="group inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-cyan-500 to-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
+              >
+                Register
             </button>
           </div>
         </nav>
@@ -280,10 +286,16 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onNavigateToAuth, onNavigate,
                                     </button>
                                 ))}
                             </div>
-                            <div className="py-6">
+                            <div className="py-6 space-y-4">
                                 <button
-                                  onClick={() => { setMobileMenuOpen(false); onNavigateToAuth(); }}
-                                  className="w-full rounded-lg bg-gradient-to-r from-cyan-500 to-teal-600 px-3.5 py-3 text-center text-base font-semibold leading-7 text-white shadow-md hover:shadow-lg transition-all duration-300"
+                                  onClick={() => { setMobileMenuOpen(false); onNavigateToRegister(); }}
+                                  className="w-full rounded-xl bg-gradient-to-r from-cyan-500 to-teal-600 px-3.5 py-3 text-center text-base font-semibold leading-7 text-white shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105"
+                                >
+                                  Register
+                                </button>
+                                <button
+                                  onClick={() => { setMobileMenuOpen(false); onNavigateToLogin(); }}
+                                  className="w-full rounded-xl bg-white px-3.5 py-3 text-center text-base font-semibold leading-7 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-100 transition-all duration-300 transform hover:scale-105"
                                 >
                                   Log in
                                 </button>
@@ -296,7 +308,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onNavigateToAuth, onNavigate,
       </header>
 
       <main className="isolate">
-        {children || <WelcomeContent onNavigateToAuth={onNavigateToAuth} />}
+        {children || <WelcomeContent onNavigateToRegister={onNavigateToRegister} />}
       </main>
 
       {/* Footer */}

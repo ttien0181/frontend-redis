@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { login, register } from '../services/api';
 import { User, AuthData } from '../types';
-import { ArrowLeftIcon, LogoIcon } from './ui/Icons';
+import { ArrowLeftIcon, LogoIcon, EyeIcon, EyeSlashIcon } from './ui/Icons';
 
 interface AuthPageProps {
   onLoginSuccess: (token: string, user: User) => void;
   onBack: () => void;
+  initialView: 'login' | 'register';
 }
 
-const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onBack }) => {
-  const [isLoginView, setIsLoginView] = useState(true);
+const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onBack, initialView }) => {
+  const [isLoginView, setIsLoginView] = useState(initialView === 'login');
   const [formData, setFormData] = useState({
     email: '',
     username: '',
@@ -20,6 +21,9 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onBack }) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -123,16 +127,24 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onBack }) => {
               </>
             )}
             <input name="email" type="email" autoComplete="email" required value={formData.email} onChange={handleChange} className="input-field" placeholder="Email address"/>
-            <input name="password" type="password" autoComplete="current-password" required value={formData.password} onChange={handleChange} className="input-field" placeholder="Password"/>
+            <div className="relative">
+                <input name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required value={formData.password} onChange={handleChange} className="input-field pr-10" placeholder="Password"/>
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-slate-700" aria-label={showPassword ? "Hide password" : "Show password"}>
+                    {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
+                </button>
+            </div>
             {!isLoginView && (
-                 <input name="confirmPassword" type="password" required value={formData.confirmPassword} onChange={handleChange} className="input-field" placeholder="Confirm Password"/>
+                 <div className="relative">
+                    <input name="confirmPassword" type={showConfirmPassword ? "text" : "password"} required value={formData.confirmPassword} onChange={handleChange} className="input-field pr-10" placeholder="Confirm Password"/>
+                     <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-slate-700" aria-label={showConfirmPassword ? "Hide password" : "Show password"}>
+                        {showConfirmPassword ? <EyeSlashIcon /> : <EyeIcon />}
+                    </button>
+                 </div>
             )}
           </div>
 
           <div>
-            <button type="submit" disabled={loading} className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 focus:ring-offset-white disabled:bg-teal-500/50 transition-all duration-300">
-              <span className="absolute left-0 inset-y-0 flex items-center pl-3">
-              </span>
+            <button type="submit" disabled={loading} className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-base font-semibold rounded-xl text-white bg-gradient-to-r from-cyan-500 to-teal-600 hover:shadow-xl transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50">
               {loading ? 'Processing...' : (isLoginView ? 'Sign In' : 'Register')}
             </button>
           </div>
@@ -145,7 +157,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onBack }) => {
             display: block;
             width: 100%;
             padding: 0.85rem;
-            border-radius: 0.375rem;
+            border-radius: 0.75rem; /* rounded-xl */
             border: 1px solid #cbd5e1;
             background-color: #f1f5f9;
             color: #1e293b;
@@ -154,7 +166,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, onBack }) => {
         }
         .input-field:focus {
             z-index: 10;
-            border-color: #0d9488; /* teal-600 */
+            border-color: #14b8a6; /* teal-500 */
             box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.4); /* teal-500 with opacity */
         }
       `}</style>
